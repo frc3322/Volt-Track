@@ -1,8 +1,17 @@
 import { useState } from 'react';
-import { BatteryFull, BarChart3, LogIn, LogOut, Zap } from 'lucide-react';
+import { BatteryFull, BarChart3, LogIn, LogOut, Settings2, Zap } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { exportDatabaseBackup, fetchExportSnapshot } from '@/api';
 import BatteryActionForm from '@/features/battery-actions/BatteryActionForm';
 import Dashboard from '@/features/dashboard/Dashboard';
 import ManageBatteriesPanel from '@/features/inventory/ManageBatteriesPanel';
+import SettingsPanel from '@/features/settings/SettingsPanel';
+import {
+  buildExportFileName,
+  buildPdfReport,
+  buildTextReport,
+  downloadBlob,
+} from '@/features/settings/exporters';
 import { useBatteryTracker } from '@/hooks/useBatteryTracker';
 
 type AppTab = 'dashboard' | 'checkout' | 'checkin' | 'manage';
@@ -20,6 +29,7 @@ const tabs = [
 
 function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const {
     batteries,
     logs,
@@ -29,6 +39,8 @@ function App() {
     removeBattery,
     checkinBattery,
     checkoutBattery,
+    importDatabase,
+    clearDatabase,
   } = useBatteryTracker();
 
   const handleCheckout = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number) => {
@@ -45,6 +57,25 @@ function App() {
     }
   };
 
+  const handleExportDatabase = async () => {
+    const backupBlob = await exportDatabaseBackup();
+    downloadBlob(backupBlob, buildExportFileName('backup', 'db'));
+  };
+
+  const handleExportText = async () => {
+    const snapshot = await fetchExportSnapshot();
+    const report = buildTextReport(snapshot);
+    downloadBlob(
+      new Blob([report], { type: 'text/plain;charset=utf-8' }),
+      buildExportFileName('report', 'txt'),
+    );
+  };
+
+  const handleExportPdf = async () => {
+    const snapshot = await fetchExportSnapshot();
+    downloadBlob(buildPdfReport(snapshot), buildExportFileName('report', 'pdf'));
+  };
+
   return (
     <div className="min-h-screen px-2 py-4 md:px-3 md:py-8 flex flex-col max-w-7xl mx-auto">
       <header className="flex flex-col md:flex-row items-center justify-between mb-10 pb-6 border-b border-white/5 gap-6">
@@ -58,22 +89,33 @@ function App() {
           </div>
         </div>
 
-        <nav className="flex items-center gap-4 bg-[#1e2228] p-2 rounded-2xl border border-white/5 neu-inset">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                data-active={activeTab === tab.id}
-                className="neu-tab"
-              >
-                <Icon className="w-4 h-4" />
-                <span className="hidden md:inline">{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <div className="flex flex-col items-stretch gap-4 md:flex-row md:items-center">
+          <nav className="flex items-center gap-4 bg-[#1e2228] p-2 rounded-2xl border border-white/5 neu-inset">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  data-active={activeTab === tab.id}
+                  className="neu-tab"
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="hidden md:inline">{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <Button
+            type="button"
+            variant="secondary"
+            className="flex items-center justify-center gap-2 px-5"
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            <Settings2 className="h-4 w-4" />
+            <span>Settings</span>
+          </Button>
+        </div>
       </header>
 
       <main className="flex-1 w-full">
@@ -113,6 +155,19 @@ function App() {
           </>
         )}
       </main>
+
+      {isSettingsOpen && (
+        <SettingsPanel
+          batteryCount={batteries.length}
+          logCount={logs.length}
+          onClose={() => setIsSettingsOpen(false)}
+          onImportDatabase={importDatabase}
+          onExportDatabase={handleExportDatabase}
+          onExportText={handleExportText}
+          onExportPdf={handleExportPdf}
+          onClearDatabase={clearDatabase}
+        />
+      )}
     </div>
   );
 }

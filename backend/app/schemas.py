@@ -48,6 +48,18 @@ class LogResponse(BaseModel):
     chargeLevel: int
 
 
+class ExportSnapshotResponse(BaseModel):
+    exportedAt: str
+    batteries: list[BatteryResponse]
+    logs: list[LogResponse]
+
+
+class DatabaseMutationResponse(BaseModel):
+    status: str
+    batteryCount: int
+    logCount: int
+
+
 class SummaryResponse(BaseModel):
     totalBatteries: int
     checkedIn: int

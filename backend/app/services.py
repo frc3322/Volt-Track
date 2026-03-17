@@ -3,8 +3,9 @@ from __future__ import annotations
 import sqlite3
 from uuid import uuid4
 
-from .database import utc_now_iso
+from .database import init_db, replace_database_file, utc_now_iso
 from .repository import (
+    clear_database as clear_database_records,
     delete_battery as delete_battery_record,
     get_battery,
     get_battery_status,
@@ -51,7 +52,7 @@ def get_battery_by_id(battery_id: str) -> dict | None:
     return _battery_row_to_dict(row) if row else None
 
 
-def list_logs(battery_id: str | None = None, limit: int = 50) -> list[dict]:
+def list_logs(battery_id: str | None = None, limit: int | None = 50) -> list[dict]:
     return [_log_row_to_dict(row) for row in fetch_logs(battery_id=battery_id, limit=limit)]
 
 
@@ -138,4 +139,31 @@ def get_summary() -> dict:
         "checkedIn": summary["checked_in"],
         "checkedOut": summary["checked_out"],
         "averageHealth": summary["average_health"],
+    }
+
+
+def export_snapshot() -> dict:
+    return {
+        "exportedAt": utc_now_iso(),
+        "batteries": list_batteries(),
+        "logs": list_logs(limit=None),
+    }
+
+
+def import_database(contents: bytes) -> dict:
+    replace_database_file(contents)
+    init_db()
+    return {
+        "status": "imported",
+        "batteryCount": len(list_batteries()),
+        "logCount": len(list_logs(limit=None)),
+    }
+
+
+def clear_database() -> dict:
+    clear_database_records()
+    return {
+        "status": "cleared",
+        "batteryCount": 0,
+        "logCount": 0,
     }

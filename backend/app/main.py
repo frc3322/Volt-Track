@@ -2,16 +2,20 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import Body, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
-from .database import init_db
+from .database import get_db_path, init_db
 from .services import (
     apply_battery_action,
+    clear_database,
     create_battery,
     delete_battery,
+    export_snapshot,
     get_battery_by_id,
     get_summary,
+    import_database,
     list_batteries,
     list_logs,
 )
@@ -19,6 +23,8 @@ from .schemas import (
     BatteryAction,
     BatteryCreate,
     BatteryResponse,
+    DatabaseMutationResponse,
+    ExportSnapshotResponse,
     LogResponse,
     SummaryResponse,
 )
@@ -52,6 +58,35 @@ def health() -> dict[str, str]:
 @app.get("/summary", response_model=SummaryResponse)
 def summary() -> dict:
     return get_summary()
+
+
+@app.get("/exports/snapshot", response_model=ExportSnapshotResponse)
+def snapshot() -> dict:
+    return export_snapshot()
+
+
+@app.get("/database/export")
+def export_database() -> FileResponse:
+    db_path = get_db_path()
+    filename = f"volttrack-backup-{db_path.stem}.db"
+    return FileResponse(
+        path=db_path,
+        media_type="application/x-sqlite3",
+        filename=filename,
+    )
+
+
+@app.post("/database/import", response_model=DatabaseMutationResponse)
+def import_database_file(contents: bytes = Body(..., media_type="application/octet-stream")) -> dict:
+    try:
+        return import_database(contents)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.post("/database/clear", response_model=DatabaseMutationResponse)
+def clear_database_file() -> dict:
+    return clear_database()
 
 
 @app.get("/batteries", response_model=list[BatteryResponse])

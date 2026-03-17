@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
   checkinBattery as submitCheckin,
+  clearDatabase as submitClearDatabase,
   checkoutBattery as submitCheckout,
   createBattery,
   fetchBatteries,
   fetchLogs,
+  importDatabaseBackup as submitDatabaseImport,
   removeBattery as submitRemoval,
 } from '@/api';
 import { Battery, BatteryActionPayload, BatteryCreatePayload, LogRecord } from '@/types';
@@ -14,6 +16,11 @@ interface TrackerState {
   logs: LogRecord[];
   isLoading: boolean;
   errorMessage: string | null;
+}
+
+interface MutationResult {
+  ok: boolean;
+  error?: string;
 }
 
 const initialState: TrackerState = {
@@ -111,11 +118,45 @@ export function useBatteryTracker() {
     return runMutation(() => submitCheckin(batteryId, payload));
   };
 
+  const importDatabase = async (file: File) => {
+    setState((current) => ({ ...current, errorMessage: null }));
+    try {
+      await submitDatabaseImport(file);
+      await loadData();
+      return { ok: true } satisfies MutationResult;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to import the database backup.';
+      setState((current) => ({ ...current, errorMessage: message }));
+      return {
+        ok: false,
+        error: message,
+      } satisfies MutationResult;
+    }
+  };
+
+  const clearDatabase = async () => {
+    setState((current) => ({ ...current, errorMessage: null }));
+    try {
+      await submitClearDatabase();
+      await loadData();
+      return { ok: true } satisfies MutationResult;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to clear the database.';
+      setState((current) => ({ ...current, errorMessage: message }));
+      return {
+        ok: false,
+        error: message,
+      } satisfies MutationResult;
+    }
+  };
+
   return {
     ...state,
     addBattery,
     removeBattery,
     checkoutBattery,
     checkinBattery,
+    importDatabase,
+    clearDatabase,
   };
 }

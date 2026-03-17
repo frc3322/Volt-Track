@@ -20,16 +20,20 @@ def get_battery(battery_id: str) -> sqlite3.Row | None:
         ).fetchone()
 
 
-def list_logs(battery_id: str | None = None, limit: int = 50) -> list[sqlite3.Row]:
+def list_logs(
+    battery_id: str | None = None,
+    limit: int | None = 50,
+) -> list[sqlite3.Row]:
     query = "SELECT * FROM logs"
-    params: tuple[object, ...]
+    params: tuple[object, ...] = ()
     if battery_id:
         query += " WHERE battery_id = ?"
-        params = (battery_id, limit)
-        query += " ORDER BY timestamp DESC LIMIT ?"
-    else:
-        params = (limit,)
-        query += " ORDER BY timestamp DESC LIMIT ?"
+        params = (battery_id,)
+
+    query += " ORDER BY timestamp DESC"
+    if limit is not None:
+        query += " LIMIT ?"
+        params = (*params, limit)
 
     with get_connection() as connection:
         return connection.execute(query, params).fetchall()
@@ -114,6 +118,13 @@ def delete_battery(battery_id: str) -> bool:
         cursor = connection.execute("DELETE FROM batteries WHERE id = ?", (battery_id,))
         connection.commit()
     return cursor.rowcount > 0
+
+
+def clear_database() -> None:
+    with get_connection() as connection:
+        connection.execute("DELETE FROM logs")
+        connection.execute("DELETE FROM batteries")
+        connection.commit()
 
 
 def get_summary() -> dict[str, int]:

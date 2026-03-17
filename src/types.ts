@@ -30,3 +30,10 @@ export interface BatteryActionPayload {
 export interface BatteryCreatePayload extends BatteryActionPayload {
   name: string;
 }
+
+
+export interface ExportSnapshot {
+  exportedAt: string;
+  batteries: Battery[];
+  logs: LogRecord[];
+}

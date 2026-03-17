@@ -13,9 +13,12 @@ from backend.app.main import (
     app,
     battery,
     checkin_battery,
+    clear_database_file,
     checkout_battery,
     health,
+    import_database_file,
     remove_battery,
+    snapshot,
     summary,
 )
 from backend.app.schemas import BatteryAction, BatteryCreate
@@ -74,3 +77,18 @@ class BatteryTrackerApiTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as missing_battery:
             battery(battery_id)
         self.assertEqual(missing_battery.exception.status_code, 404)
+
+    def test_database_can_be_cleared_and_restored_from_backup_file(self) -> None:
+        original_snapshot = snapshot()
+        backup_bytes = self.db_path.read_bytes()
+
+        cleared = clear_database_file()
+        self.assertEqual(cleared["status"], "cleared")
+        self.assertEqual(cleared["batteryCount"], 0)
+        self.assertEqual(summary()["totalBatteries"], 0)
+
+        restored = import_database_file(backup_bytes)
+        self.assertEqual(restored["status"], "imported")
+        self.assertEqual(restored["batteryCount"], len(original_snapshot["batteries"]))
+        self.assertEqual(restored["logCount"], len(original_snapshot["logs"]))
+        self.assertEqual(summary()["totalBatteries"], len(original_snapshot["batteries"]))

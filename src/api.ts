@@ -1,12 +1,12 @@
-import { Battery, BatteryActionPayload, BatteryCreatePayload, LogRecord } from './types';
+import { Battery, BatteryActionPayload, BatteryCreatePayload, ExportSnapshot, LogRecord } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...init?.headers,
-  };
+  const headers = new Headers(init?.headers);
+  if (!headers.has('Content-Type') && init?.body && typeof init.body === 'string') {
+    headers.set('Content-Type', 'application/json');
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers,
@@ -57,5 +57,44 @@ export function checkinBattery(batteryId: string, payload: BatteryActionPayload)
 export function removeBattery(batteryId: string): Promise<void> {
   return request<void>(`/batteries/${batteryId}`, {
     method: 'DELETE',
+  });
+}
+
+
+export function fetchExportSnapshot(): Promise<ExportSnapshot> {
+  return request<ExportSnapshot>('/exports/snapshot');
+}
+
+
+export async function exportDatabaseBackup(): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/database/export`);
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `Request failed with status ${response.status}`);
+  }
+
+  return response.blob();
+}
+
+
+export async function importDatabaseBackup(file: File): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/database/import`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/octet-stream',
+    },
+    body: await file.arrayBuffer(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `Request failed with status ${response.status}`);
+  }
+}
+
+
+export function clearDatabase(): Promise<void> {
+  return request<void>('/database/clear', {
+    method: 'POST',
   });
 }

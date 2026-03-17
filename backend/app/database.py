@@ -1,14 +1,36 @@
 from __future__ import annotations
 
-import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from tempfile import NamedTemporaryFile
+import os
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BASE_DIR / "data"
 DEFAULT_DB_PATH = DATA_DIR / "battery_tracker.db"
+REQUIRED_TABLE_COLUMNS = {
+    "batteries": {
+        "id",
+        "name",
+        "status",
+        "current_voltage",
+        "resistance",
+        "charge_level",
+        "health",
+        "last_updated",
+    },
+    "logs": {
+        "id",
+        "battery_id",
+        "timestamp",
+        "type",
+        "voltage",
+        "resistance",
+        "charge_level",
+    },
+}
 
 
 def utc_now_iso() -> str:
@@ -33,6 +55,9 @@ def get_connection() -> sqlite3.Connection:
 
 def init_db() -> None:
     with get_connection() as connection:
+        has_batteries_table = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'batteries'"
+        ).fetchone() is not None
         connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS batteries (
@@ -59,8 +84,7 @@ def init_db() -> None:
             """
         )
 
-        battery_count = connection.execute("SELECT COUNT(*) FROM batteries").fetchone()[0]
-        if battery_count == 0:
+        if not has_batteries_table:
             seed_database(connection)
         normalize_legacy_statuses(connection)
 
@@ -169,3 +193,61 @@ def seed_database(connection: sqlite3.Connection) -> None:
         logs,
     )
     connection.commit()
+
+
+def validate_database_file(db_path: Path) -> None:
+    try:
+        with sqlite3.connect(db_path) as connection:
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+            }
+
+            missing_tables = [
+                table_name for table_name in REQUIRED_TABLE_COLUMNS if table_name not in tables
+            ]
+            if missing_tables:
+                raise ValueError(
+                    f"Imported database is missing required tables: {', '.join(missing_tables)}"
+                )
+
+            for table_name, expected_columns in REQUIRED_TABLE_COLUMNS.items():
+                columns = {
+                    row[1]
+                    for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+                }
+                missing_columns = sorted(expected_columns - columns)
+                if missing_columns:
+                    raise ValueError(
+                        f"Imported database is missing required columns in {table_name}: "
+                        f"{', '.join(missing_columns)}"
+                    )
+    except sqlite3.DatabaseError as error:
+        raise ValueError("Imported file is not a valid VoltTrack database.") from error
+
+
+def replace_database_file(contents: bytes) -> None:
+    if not contents:
+        raise ValueError("Imported file is empty.")
+
+    db_path = get_db_path()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with NamedTemporaryFile(
+        mode="wb",
+        delete=False,
+        dir=db_path.parent,
+        prefix="volttrack-import-",
+        suffix=".db",
+    ) as temporary_file:
+        temporary_file.write(contents)
+        temporary_path = Path(temporary_file.name)
+
+    try:
+        validate_database_file(temporary_path)
+        os.replace(temporary_path, db_path)
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
