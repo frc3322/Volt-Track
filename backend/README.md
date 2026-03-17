@@ -3,7 +3,6 @@
 Small Python backend for the battery tracker app. It uses:
 
 - FastAPI for the main JSON API
-- Flask for a small mounted compatibility/admin surface
 - SQLite for persistence
 
 ## Run
@@ -35,15 +34,9 @@ The API will be available at `http://127.0.0.1:8000`.
 - `POST /batteries/{battery_id}/checkin`
 - `GET /logs`
 
-## Flask routes
-
-These are mounted under `/flask`.
-
-- `GET /flask/healthz`
-- `GET /flask/counts`
-
 ## Notes
 
 - The database file defaults to `backend/data/battery_tracker.db`.
 - Battery inventory only uses `Checked In` and `Checked Out` states.
 - Check-ins and check-outs are persisted in SQLite via the `logs` table.
+- Set `BATTERY_TRACKER_DB_PATH` to point the app at a different SQLite file for local experiments or tests.

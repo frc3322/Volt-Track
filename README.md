@@ -3,7 +3,7 @@
 This project has two parts:
 
 - A React + Vite frontend in the repository root
-- A Python backend in `backend/` using FastAPI, Flask, and SQLite
+- A Python backend in `backend/` using FastAPI and SQLite
 
 The frontend talks to the backend at `http://127.0.0.1:8000` by default.
 
@@ -59,6 +59,14 @@ To preview the production frontend build locally:
 npm run preview
 ```
 
+## Test the project
+
+```bash
+npm test
+```
+
+This runs the Vitest frontend suite and the backend `unittest` suite against an isolated temporary SQLite database.
+
 ## Backend routes
 
 Main API:
@@ -73,13 +81,9 @@ Main API:
 - `POST /batteries/{battery_id}/checkin`
 - `GET /logs`
 
-Mounted Flask routes:
-
-- `GET /flask/healthz`
-- `GET /flask/counts`
-
 ## Data and notes
 
 - The SQLite database is stored at `backend/data/battery_tracker.db`.
 - On first startup, the backend creates the database and seeds a small set of sample batteries and logs.
 - If you need the frontend to call a different backend URL, set `VITE_API_BASE_URL` before starting Vite.
+- Tests can override the database location with `BATTERY_TRACKER_DB_PATH`.

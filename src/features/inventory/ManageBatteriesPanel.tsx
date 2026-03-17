@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { Battery } from '../types';
-import { Badge, Button, Card, Dialog, Input, Label } from './ui';
+import { Badge, Button, Card, Dialog, Input, Label } from '@/components/ui';
+import { Battery } from '@/types';
 import { BatteryFull, Plus, Trash2, X } from 'lucide-react';
 
 interface AddBatteryValues {
@@ -165,6 +165,7 @@ export default function ManageBatteriesPanel({ batteries, onAddBattery, onRemove
                 <Input
                   required
                   autoFocus
+                  aria-label="Battery Name"
                   value={formValues.name}
                   onChange={(e) => setFormValues({ ...formValues, name: e.target.value })}
                   placeholder="Heavy Lift Rig 2"
@@ -178,6 +179,7 @@ export default function ManageBatteriesPanel({ batteries, onAddBattery, onRemove
                     required
                     type="number"
                     step="0.1"
+                    aria-label="Voltage (V)"
                     value={formValues.voltage}
                     onChange={(e) => setFormValues({ ...formValues, voltage: e.target.value })}
                     placeholder="24.2"
@@ -189,6 +191,7 @@ export default function ManageBatteriesPanel({ batteries, onAddBattery, onRemove
                     required
                     type="number"
                     step="0.1"
+                    aria-label="Resistance (mΩ)"
                     value={formValues.resistance}
                     onChange={(e) => setFormValues({ ...formValues, resistance: e.target.value })}
                     placeholder="12.5"
@@ -203,6 +206,7 @@ export default function ManageBatteriesPanel({ batteries, onAddBattery, onRemove
                   type="number"
                   min="0"
                   max="100"
+                  aria-label="Charge Level (%)"
                   value={formValues.chargeLevel}
                   onChange={(e) => setFormValues({ ...formValues, chargeLevel: e.target.value })}
                   placeholder="100"

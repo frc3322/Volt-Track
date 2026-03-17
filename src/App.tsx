@@ -1,111 +1,46 @@
-import { useEffect, useState } from 'react';
-import { LogIn, LogOut, BarChart3, Zap, BatteryFull } from 'lucide-react';
-import Dashboard from './components/Dashboard';
-import CheckoutForm from './components/CheckoutForm';
-import CheckinForm from './components/CheckinForm';
-import ManageBatteriesPanel from './components/ManageBatteriesPanel';
-import { Battery, LogRecord } from './types';
-import {
-  checkinBattery,
-  checkoutBattery,
-  createBattery,
-  fetchBatteries,
-  fetchLogs,
-  removeBattery,
-} from './api';
+import { useState } from 'react';
+import { BatteryFull, BarChart3, LogIn, LogOut, Zap } from 'lucide-react';
+import BatteryActionForm from '@/features/battery-actions/BatteryActionForm';
+import Dashboard from '@/features/dashboard/Dashboard';
+import ManageBatteriesPanel from '@/features/inventory/ManageBatteriesPanel';
+import { useBatteryTracker } from '@/hooks/useBatteryTracker';
+
+type AppTab = 'dashboard' | 'checkout' | 'checkin' | 'manage';
+
+const tabs = [
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'checkout', label: 'Check Out', icon: LogOut },
+  { id: 'checkin', label: 'Check In', icon: LogIn },
+  { id: 'manage', label: 'Manage', icon: BatteryFull },
+] as const satisfies ReadonlyArray<{
+  id: AppTab;
+  label: string;
+  icon: typeof BarChart3;
+}>;
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'checkout' | 'checkin' | 'manage'>('dashboard');
-  const [batteries, setBatteries] = useState<Battery[]>([]);
-  const [logs, setLogs] = useState<LogRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const loadData = async () => {
-    setErrorMessage(null);
-    const [batteryData, logData] = await Promise.all([fetchBatteries(), fetchLogs()]);
-    setBatteries(batteryData);
-    setLogs(logData);
-  };
-
-  const runMutation = async <T,>(operation: () => Promise<T>): Promise<T | null> => {
-    setErrorMessage(null);
-    try {
-      return await operation();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to save battery changes.');
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const initialize = async () => {
-      try {
-        const [batteryData, logData] = await Promise.all([fetchBatteries(), fetchLogs()]);
-        if (cancelled) {
-          return;
-        }
-        setBatteries(batteryData);
-        setLogs(logData);
-      } catch (error) {
-        if (!cancelled) {
-          setErrorMessage(error instanceof Error ? error.message : 'Unable to load battery data.');
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    initialize();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const handleAddBattery = async (name: string, voltage: number, resistance: number, chargeLevel: number) => {
-    await runMutation(async () => {
-      await createBattery({ name, voltage, resistance, chargeLevel });
-      await loadData();
-    });
-  };
-
-  const handleRemoveBattery = async (batteryId: string) => {
-    const battery = batteries.find((entry) => entry.id === batteryId);
-    if (!battery || battery.status === 'Checked Out') {
-      return false;
-    }
-
-    const result = await runMutation(async () => {
-      await removeBattery(batteryId);
-      await loadData();
-      return true;
-    });
-    return result ?? false;
-  };
+  const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
+  const {
+    batteries,
+    logs,
+    isLoading,
+    errorMessage,
+    addBattery,
+    removeBattery,
+    checkinBattery,
+    checkoutBattery,
+  } = useBatteryTracker();
 
   const handleCheckout = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number) => {
-    const result = await runMutation(async () => {
-      await checkoutBattery(batteryId, { voltage, resistance, chargeLevel });
-      await loadData();
-      return true;
-    });
-    if (result) {
+    const updated = await checkoutBattery(batteryId, { voltage, resistance, chargeLevel });
+    if (updated) {
       setActiveTab('dashboard');
     }
   };
 
   const handleCheckin = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number) => {
-    const result = await runMutation(async () => {
-      await checkinBattery(batteryId, { voltage, resistance, chargeLevel });
-      await loadData();
-      return true;
-    });
-    if (result) {
+    const updated = await checkinBattery(batteryId, { voltage, resistance, chargeLevel });
+    if (updated) {
       setActiveTab('dashboard');
     }
   };
@@ -124,38 +59,20 @@ function App() {
         </div>
 
         <nav className="flex items-center gap-4 bg-[#1e2228] p-2 rounded-2xl border border-white/5 neu-inset">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            data-active={activeTab === 'dashboard'}
-            className="neu-tab"
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden md:inline">Dashboard</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('checkout')}
-            data-active={activeTab === 'checkout'}
-            className="neu-tab"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden md:inline">Check Out</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('checkin')}
-            data-active={activeTab === 'checkin'}
-            className="neu-tab"
-          >
-            <LogIn className="w-4 h-4" />
-            <span className="hidden md:inline">Check In</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('manage')}
-            data-active={activeTab === 'manage'}
-            className="neu-tab"
-          >
-            <BatteryFull className="w-4 h-4" />
-            <span className="hidden md:inline">Manage</span>
-          </button>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                data-active={activeTab === tab.id}
+                className="neu-tab"
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden md:inline">{tab.label}</span>
+              </button>
+            );
+          })}
         </nav>
       </header>
 
@@ -172,13 +89,25 @@ function App() {
         {!isLoading && !errorMessage && (
           <>
             {activeTab === 'dashboard' && <Dashboard batteries={batteries} logs={logs} />}
-            {activeTab === 'checkout' && <CheckoutForm batteries={batteries} onCheckout={handleCheckout} />}
-            {activeTab === 'checkin' && <CheckinForm batteries={batteries} onCheckin={handleCheckin} />}
+            {activeTab === 'checkout' && (
+              <BatteryActionForm
+                mode="checkout"
+                batteries={batteries}
+                onSubmit={handleCheckout}
+              />
+            )}
+            {activeTab === 'checkin' && (
+              <BatteryActionForm
+                mode="checkin"
+                batteries={batteries}
+                onSubmit={handleCheckin}
+              />
+            )}
             {activeTab === 'manage' && (
               <ManageBatteriesPanel
                 batteries={batteries}
-                onAddBattery={handleAddBattery}
-                onRemoveBattery={handleRemoveBattery}
+                onAddBattery={addBattery}
+                onRemoveBattery={removeBattery}
               />
             )}
           </>

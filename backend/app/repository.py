@@ -1,54 +1,26 @@
 from __future__ import annotations
 
 import sqlite3
-from uuid import uuid4
 
-from .database import get_connection, utc_now_iso
-
-
-def _battery_row_to_dict(row: sqlite3.Row) -> dict:
-    return {
-        "id": row["id"],
-        "name": row["name"],
-        "status": row["status"],
-        "currentVoltage": row["current_voltage"],
-        "resistance": row["resistance"],
-        "chargeLevel": row["charge_level"],
-        "health": row["health"],
-        "lastUpdated": row["last_updated"],
-    }
+from .database import get_connection
 
 
-def _log_row_to_dict(row: sqlite3.Row) -> dict:
-    return {
-        "id": row["id"],
-        "batteryId": row["battery_id"],
-        "timestamp": row["timestamp"],
-        "type": row["type"],
-        "voltage": row["voltage"],
-        "resistance": row["resistance"],
-        "chargeLevel": row["charge_level"],
-    }
-
-
-def list_batteries() -> list[dict]:
+def list_batteries() -> list[sqlite3.Row]:
     with get_connection() as connection:
-        rows = connection.execute(
+        return connection.execute(
             "SELECT * FROM batteries ORDER BY name COLLATE NOCASE"
         ).fetchall()
-    return [_battery_row_to_dict(row) for row in rows]
 
 
-def get_battery(battery_id: str) -> dict | None:
+def get_battery(battery_id: str) -> sqlite3.Row | None:
     with get_connection() as connection:
-        row = connection.execute(
+        return connection.execute(
             "SELECT * FROM batteries WHERE id = ?",
             (battery_id,),
         ).fetchone()
-    return _battery_row_to_dict(row) if row else None
 
 
-def list_logs(battery_id: str | None = None, limit: int = 50) -> list[dict]:
+def list_logs(battery_id: str | None = None, limit: int = 50) -> list[sqlite3.Row]:
     query = "SELECT * FROM logs"
     params: tuple[object, ...]
     if battery_id:
@@ -60,23 +32,20 @@ def list_logs(battery_id: str | None = None, limit: int = 50) -> list[dict]:
         query += " ORDER BY timestamp DESC LIMIT ?"
 
     with get_connection() as connection:
-        rows = connection.execute(query, params).fetchall()
-    return [_log_row_to_dict(row) for row in rows]
+        return connection.execute(query, params).fetchall()
 
 
-def create_battery(
+def insert_battery(
     *,
+    battery_id: str,
     name: str,
+    status: str,
     voltage: float,
     resistance: float,
     charge_level: int,
     health: int,
-    status: str,
-) -> dict:
-    battery_id = f"batt-{uuid4().hex[:10]}"
-    log_id = f"log-{uuid4().hex[:10]}"
-    timestamp = utc_now_iso()
-
+    last_updated: str,
+) -> None:
     with get_connection() as connection:
         connection.execute(
             """
@@ -84,66 +53,30 @@ def create_battery(
                 id, name, status, current_voltage, resistance, charge_level, health, last_updated
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (battery_id, name, status, voltage, resistance, charge_level, health, timestamp),
-        )
-        connection.execute(
-            """
-            INSERT INTO logs (
-                id, battery_id, timestamp, type, voltage, resistance, charge_level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (log_id, battery_id, timestamp, "add", voltage, resistance, charge_level),
+            (
+                battery_id,
+                name,
+                status,
+                voltage,
+                resistance,
+                charge_level,
+                health,
+                last_updated,
+            ),
         )
         connection.commit()
 
-    return get_battery(battery_id)
-
-
-def delete_battery(battery_id: str) -> bool:
-    with get_connection() as connection:
-        existing = connection.execute(
-            "SELECT status FROM batteries WHERE id = ?",
-            (battery_id,),
-        ).fetchone()
-        if not existing:
-            return False
-        if existing["status"] == "Checked Out":
-            raise ValueError("Cannot remove a checked out battery")
-
-        connection.execute("DELETE FROM batteries WHERE id = ?", (battery_id,))
-        connection.commit()
-
-    return True
-
-
-def apply_battery_action(
+def insert_log(
     *,
+    log_id: str,
     battery_id: str,
+    timestamp: str,
     voltage: float,
     resistance: float,
     charge_level: int,
     log_type: str,
-    next_status: str,
-) -> dict | None:
-    timestamp = utc_now_iso()
-    log_id = f"log-{uuid4().hex[:10]}"
-
+) -> None:
     with get_connection() as connection:
-        existing = connection.execute(
-            "SELECT id FROM batteries WHERE id = ?",
-            (battery_id,),
-        ).fetchone()
-        if not existing:
-            return None
-
-        connection.execute(
-            """
-            UPDATE batteries
-            SET status = ?, current_voltage = ?, resistance = ?, charge_level = ?, last_updated = ?
-            WHERE id = ?
-            """,
-            (next_status, voltage, resistance, charge_level, timestamp, battery_id),
-        )
         connection.execute(
             """
             INSERT INTO logs (
@@ -154,10 +87,36 @@ def apply_battery_action(
         )
         connection.commit()
 
-    return get_battery(battery_id)
+def update_battery(
+    *,
+    battery_id: str,
+    status: str,
+    voltage: float,
+    resistance: float,
+    charge_level: int,
+    last_updated: str,
+) -> bool:
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            UPDATE batteries
+            SET status = ?, current_voltage = ?, resistance = ?, charge_level = ?, last_updated = ?
+            WHERE id = ?
+            """,
+            (status, voltage, resistance, charge_level, last_updated, battery_id),
+        )
+        connection.commit()
+    return cursor.rowcount > 0
 
 
-def get_summary() -> dict:
+def delete_battery(battery_id: str) -> bool:
+    with get_connection() as connection:
+        cursor = connection.execute("DELETE FROM batteries WHERE id = ?", (battery_id,))
+        connection.commit()
+    return cursor.rowcount > 0
+
+
+def get_summary() -> dict[str, int]:
     with get_connection() as connection:
         rows = connection.execute(
             "SELECT status, COUNT(*) AS count FROM batteries GROUP BY status"
@@ -169,17 +128,17 @@ def get_summary() -> dict:
 
     counts = {row["status"]: row["count"] for row in rows}
     return {
-        "totalBatteries": total,
-        "checkedIn": counts.get("Checked In", 0),
-        "checkedOut": counts.get("Checked Out", 0),
-        "averageHealth": int(avg_health),
+        "total": total,
+        "checked_in": counts.get("Checked In", 0),
+        "checked_out": counts.get("Checked Out", 0),
+        "average_health": int(avg_health),
     }
 
 
-def flask_counts() -> dict:
-    summary = get_summary()
-    return {
-        "total": summary["totalBatteries"],
-        "checked_in": summary["checkedIn"],
-        "checked_out": summary["checkedOut"],
-    }
+def get_battery_status(battery_id: str) -> str | None:
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT status FROM batteries WHERE id = ?",
+            (battery_id,),
+        ).fetchone()
+    return row["status"] if row else None

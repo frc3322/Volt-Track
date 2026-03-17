@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Battery, LogRecord } from '../types';
-import { Badge, Card, Dialog } from './ui';
+import { Badge, Card, Dialog } from '@/components/ui';
+import { Battery, LogRecord } from '@/types';
 import {
   ResponsiveContainer,
   BarChart,

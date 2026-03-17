@@ -4,15 +4,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.wsgi import WSGIMiddleware
 
 from .database import init_db
-from .flask_app import flask_app
-from .repository import (
+from .services import (
     apply_battery_action,
     create_battery,
     delete_battery,
-    get_battery,
+    get_battery_by_id,
     get_summary,
     list_batteries,
     list_logs,
@@ -45,8 +43,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/flask", WSGIMiddleware(flask_app))
-
 
 @app.get("/health")
 def health() -> dict[str, str]:
@@ -65,7 +61,7 @@ def batteries() -> list[dict]:
 
 @app.get("/batteries/{battery_id}", response_model=BatteryResponse)
 def battery(battery_id: str) -> dict:
-    record = get_battery(battery_id)
+    record = get_battery_by_id(battery_id)
     if not record:
         raise HTTPException(status_code=404, detail="Battery not found")
     return record

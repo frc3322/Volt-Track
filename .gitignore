@@ -1,25 +1,7 @@
 node_modules/
 dist/
-
-# Python backend
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
 .venv/
-venv/
-
-# Local backend data
-*.db
+__pycache__/
+*.pyc
+.pytest_cache/
 backend/data/*.db
-
-# Environment files
-.env
-.env.*
-!.env.example
-
-# Editors and OS files
-.DS_Store
-.idea/
-.vscode/
