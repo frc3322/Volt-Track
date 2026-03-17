@@ -85,6 +85,15 @@ export function Dialog({
     }
   };
 
+  const handleDialogClick = (event: MouseEvent<HTMLDialogElement>) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+      return;
+    }
+
+    event.stopPropagation();
+  };
+
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm ${overlayClassName}`}
@@ -99,12 +108,12 @@ export function Dialog({
         {...props}
         open
         aria-labelledby={titleId ?? fallbackTitleId}
-        className="m-0 border-none bg-transparent p-0 text-inherit shadow-none outline-none backdrop:bg-transparent"
+        className="m-0 flex w-full max-w-full justify-center border-none bg-transparent p-0 text-inherit shadow-none outline-none backdrop:bg-transparent"
         onCancel={(event) => {
           event.preventDefault();
           onClose();
         }}
-        onClick={(event) => event.stopPropagation()}
+        onClick={handleDialogClick}
         onKeyDown={handleKeyDown}
       >
         <Card className={`outline-none ${contentClassName}`}>

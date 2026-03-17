@@ -105,7 +105,7 @@
   border: 1px solid rgba(255, 255, 255, 0.03);
   box-shadow: 6px 6px 14px #0d0f12, -6px -6px 14px #2b313b;
   border-radius: 15px;
-  padding: 1.5rem;
+  padding: 1.25rem 0.85rem;
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;

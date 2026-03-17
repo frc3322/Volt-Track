@@ -46,7 +46,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 flex flex-col max-w-7xl mx-auto">
+    <div className="min-h-screen px-2 py-4 md:px-3 md:py-8 flex flex-col max-w-7xl mx-auto">
       <header className="flex flex-col md:flex-row items-center justify-between mb-10 pb-6 border-b border-white/5 gap-6">
         <div className="flex items-center gap-4 group">
           <div className="w-12 h-12 rounded-2xl neu-panel neu-outset flex items-center justify-center text-blue-400 group-hover:text-blue-300 transition-colors">

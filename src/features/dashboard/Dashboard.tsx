@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { Badge, Card, Dialog } from '@/components/ui';
 import { Battery, LogRecord } from '@/types';
 import {
@@ -18,10 +18,11 @@ import {
   AlertCircle,
   BatteryCharging,
   CalendarClock,
+  ChevronDown,
+  ChevronUp,
   Gauge,
   ShieldCheck,
   TrendingUp,
-  X,
   Zap,
 } from 'lucide-react';
 
@@ -92,6 +93,121 @@ function BatteryHistoryTooltip({ active, payload, label }: Readonly<{ active?: b
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function BatteryActivityFeed({ points }: Readonly<{ points: BatteryHistoryPoint[] }>) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [overflowState, setOverflowState] = useState({ top: false, bottom: false });
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+  const syncFeedChrome = useEffectEvent(() => {
+    const node = scrollRef.current;
+    const content = contentRef.current;
+    if (!node || !content) {
+      return;
+    }
+
+    const hasOverflow = node.scrollHeight - node.clientHeight > 1;
+    const nextState = {
+      top: hasOverflow && node.scrollTop > 2,
+      bottom: hasOverflow && node.scrollTop + node.clientHeight < node.scrollHeight - 2,
+    };
+
+    setOverflowState((current) =>
+      current.top === nextState.top && current.bottom === nextState.bottom ? current : nextState,
+    );
+
+    const cardElements = Array.from(content.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+    const firstTwoCards = cardElements.slice(0, 2);
+    if (firstTwoCards.length > 0) {
+      const measuredHeight = firstTwoCards.reduce((sum, card) => sum + card.offsetHeight, 0);
+      const gap = firstTwoCards.length > 1 ? 12 : 0;
+      const verticalPadding = 24;
+      const nextViewportHeight = measuredHeight + gap + verticalPadding;
+      setViewportHeight((current) => (current === nextViewportHeight ? current : nextViewportHeight));
+    }
+  });
+
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node) {
+      return undefined;
+    }
+
+    const handleScroll = () => {
+      syncFeedChrome();
+    };
+
+    syncFeedChrome();
+    const rafId = window.requestAnimationFrame(syncFeedChrome);
+    node.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', syncFeedChrome);
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(syncFeedChrome) : null;
+    resizeObserver?.observe(node);
+    if (contentRef.current) {
+      resizeObserver?.observe(contentRef.current);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      node.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', syncFeedChrome);
+      resizeObserver?.disconnect();
+    };
+  }, [points, syncFeedChrome]);
+
+  return (
+    <div className="relative mt-5 min-h-0 flex-1">
+      <div
+        ref={scrollRef}
+        className="overflow-y-auto pr-2"
+        style={viewportHeight ? { maxHeight: `${viewportHeight}px` } : undefined}
+      >
+        <div ref={contentRef} className="space-y-3 py-3">
+          {points.slice().reverse().map((point) => (
+            <div key={point.id} data-activity-card className="rounded-2xl neu-inset p-4">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${getLogTone(point.type)}`}>
+                  {point.type}
+                </span>
+                <span className="text-xs text-gray-500">{point.fullTime}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-500">Charge</p>
+                  <p className="font-semibold text-gray-100">{point.chargeLevel}%</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Voltage</p>
+                  <p className="font-semibold text-gray-100">{point.voltage}V</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Resistance</p>
+                  <p className="font-semibold text-gray-100">{point.resistance}mΩ</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {overflowState.top && (
+        <div className="pointer-events-none absolute inset-x-0 top-1 z-10 flex justify-center">
+          <div className="rounded-full border border-white/8 bg-[#15181d]/90 px-2 py-1 text-gray-400 shadow-[0_10px_24px_rgba(0,0,0,0.32)]">
+            <ChevronUp className="h-3.5 w-3.5" />
+          </div>
+        </div>
+      )}
+      {overflowState.bottom && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-1 z-10 flex justify-center">
+          <div className="rounded-full border border-white/8 bg-[#15181d]/90 px-2 py-1 text-gray-400 shadow-[0_-10px_24px_rgba(0,0,0,0.32)]">
+            <ChevronDown className="h-3.5 w-3.5" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -381,18 +497,9 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
           onClose={() => setSelectedBatteryId(null)}
           onEnter={() => setSelectedBatteryId(null)}
           overlayClassName="items-start overflow-y-auto bg-black/70 md:p-8"
-          contentClassName="relative w-full max-w-6xl animate-in fade-in zoom-in-95 duration-200"
+          contentClassName="w-full max-w-6xl animate-in fade-in zoom-in-95 p-5 duration-200 sm:p-6 md:p-8"
           titleId="battery-history-dialog-title"
         >
-            <button
-              type="button"
-              onClick={() => setSelectedBatteryId(null)}
-              className="absolute right-5 top-5 text-gray-500 transition-colors hover:text-gray-200"
-              aria-label="Close battery history dialog"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
             <div className="mb-8 flex flex-col gap-6 border-b border-white/5 pb-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
@@ -430,163 +537,140 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_360px]">
-              <div className="space-y-6">
-                <div className="overflow-hidden rounded-[28px] border border-white/5 bg-[radial-gradient(circle_at_top_left,_rgba(99,179,237,0.18),_transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-5">
-                  <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-100">Performance Timeline</h4>
-                      <p className="text-sm text-gray-400">Charge and voltage across every recorded event.</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 font-semibold text-blue-300">Charge %</span>
-                      <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 font-semibold text-cyan-300">Voltage</span>
-                    </div>
-                  </div>
-
-                  <div className="h-[320px] rounded-[22px] neu-inset p-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={selectedBatteryHistory} margin={{ top: 16, right: 18, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="batteryChargeFill" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stopColor="#63b3ed" stopOpacity={0.3} />
-                            <stop offset="100%" stopColor="#63b3ed" stopOpacity={0.02} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid stroke="#2d3748" strokeDasharray="3 3" vertical={false} />
-                        <XAxis
-                          dataKey="shortTime"
-                          stroke="#4a5568"
-                          tick={{ fill: '#a0aec0', fontSize: 12 }}
-                          minTickGap={20}
-                        />
-                        <YAxis
-                          yAxisId="charge"
-                          domain={[0, 100]}
-                          stroke="#4a5568"
-                          tick={{ fill: '#a0aec0', fontSize: 12 }}
-                          tickFormatter={(value) => `${value}%`}
-                        />
-                        <YAxis
-                          yAxisId="voltage"
-                          orientation="right"
-                          stroke="#4a5568"
-                          tick={{ fill: '#67e8f9', fontSize: 12 }}
-                          tickFormatter={(value) => `${value}V`}
-                        />
-                        <RechartsTooltip content={<BatteryHistoryTooltip />} />
-                        <Area
-                          yAxisId="charge"
-                          type="monotone"
-                          dataKey="chargeLevel"
-                          name="Charge"
-                          stroke="#63b3ed"
-                          fill="url(#batteryChargeFill)"
-                          strokeWidth={2}
-                        />
-                        <Line
-                          yAxisId="voltage"
-                          type="monotone"
-                          dataKey="voltage"
-                          name="Voltage"
-                          stroke="#67e8f9"
-                          strokeWidth={3}
-                          dot={{ r: 4, fill: '#67e8f9', stroke: '#0f172a', strokeWidth: 2 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                    <div className="mb-3 flex items-center gap-3 text-blue-300">
-                      <CalendarClock className="h-5 w-5" />
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">First Recorded</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-100">{selectedBatteryStats.firstSeen}</p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                    <div className="mb-3 flex items-center gap-3 text-cyan-300">
-                      <Gauge className="h-5 w-5" />
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Peak Voltage</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.maxVoltage}V</p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                    <div className="mb-3 flex items-center gap-3 text-orange-300">
-                      <TrendingUp className="h-5 w-5" />
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Lowest Charge</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.minCharge}%</p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                    <div className="mb-3 flex items-center gap-3 text-emerald-300">
-                      <ShieldCheck className="h-5 w-5" />
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Avg Resistance</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.averageResistance}mΩ</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5">
-                  <h4 className="text-lg font-semibold text-gray-100">Snapshot</h4>
-                  <div className="mt-5 space-y-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">Last update</span>
-                      <span className="font-semibold text-gray-100">{selectedBatteryStats.latest.fullTime}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">Recent change</span>
-                      <span className={`font-semibold ${selectedBatteryStats.recentChange > 0 ? 'text-orange-300' : 'text-emerald-300'}`}>
-                        {selectedBatteryStats.recentChange > 0 ? '-' : '+'}
-                        {Math.abs(selectedBatteryStats.recentChange)}%
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">Checkout cycles</span>
-                      <span className="font-semibold text-gray-100">{selectedBatteryStats.cycleCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">Current resistance</span>
-                      <span className="font-semibold text-gray-100">{selectedBattery.resistance}mΩ</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5">
-                  <h4 className="text-lg font-semibold text-gray-100">Activity Feed</h4>
-                  <div className="mt-5 max-h-[360px] space-y-3 overflow-y-auto pr-1">
-                    {selectedBatteryHistory.slice().reverse().map((point) => (
-                      <div key={point.id} className="rounded-2xl neu-inset p-4">
-                        <div className="mb-2 flex items-start justify-between gap-3">
-                          <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${getLogTone(point.type)}`}>
-                            {point.type}
-                          </span>
-                          <span className="text-xs text-gray-500">{point.fullTime}</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 text-sm">
-                          <div>
-                            <p className="text-gray-500">Charge</p>
-                            <p className="font-semibold text-gray-100">{point.chargeLevel}%</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Voltage</p>
-                            <p className="font-semibold text-gray-100">{point.voltage}V</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Resistance</p>
-                            <p className="font-semibold text-gray-100">{point.resistance}mΩ</p>
-                          </div>
-                        </div>
+            <div className="pr-2">
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_360px] xl:items-stretch">
+                <div className="space-y-6">
+                  <div className="overflow-hidden rounded-[28px] border border-white/5 bg-[radial-gradient(circle_at_top_left,_rgba(99,179,237,0.18),_transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-5">
+                    <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-100">Performance Timeline</h4>
+                        <p className="text-sm text-gray-400">Charge and voltage across every recorded event.</p>
                       </div>
-                    ))}
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 font-semibold text-blue-300">Charge %</span>
+                        <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 font-semibold text-cyan-300">Voltage</span>
+                      </div>
+                    </div>
+
+                    <div className="h-[320px] rounded-[22px] neu-inset p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={selectedBatteryHistory} margin={{ top: 16, right: 18, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="batteryChargeFill" x1="0" x2="0" y1="0" y2="1">
+                              <stop offset="0%" stopColor="#63b3ed" stopOpacity={0.3} />
+                              <stop offset="100%" stopColor="#63b3ed" stopOpacity={0.02} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid stroke="#2d3748" strokeDasharray="3 3" vertical={false} />
+                          <XAxis
+                            dataKey="shortTime"
+                            stroke="#4a5568"
+                            tick={{ fill: '#a0aec0', fontSize: 12 }}
+                            minTickGap={20}
+                          />
+                          <YAxis
+                            yAxisId="charge"
+                            domain={[0, 100]}
+                            stroke="#4a5568"
+                            tick={{ fill: '#a0aec0', fontSize: 12 }}
+                            tickFormatter={(value) => `${value}%`}
+                          />
+                          <YAxis
+                            yAxisId="voltage"
+                            orientation="right"
+                            stroke="#4a5568"
+                            tick={{ fill: '#67e8f9', fontSize: 12 }}
+                            tickFormatter={(value) => `${value}V`}
+                          />
+                          <RechartsTooltip content={<BatteryHistoryTooltip />} />
+                          <Area
+                            yAxisId="charge"
+                            type="monotone"
+                            dataKey="chargeLevel"
+                            name="Charge"
+                            stroke="#63b3ed"
+                            fill="url(#batteryChargeFill)"
+                            strokeWidth={2}
+                          />
+                          <Line
+                            yAxisId="voltage"
+                            type="monotone"
+                            dataKey="voltage"
+                            name="Voltage"
+                            stroke="#67e8f9"
+                            strokeWidth={3}
+                            dot={{ r: 4, fill: '#67e8f9', stroke: '#0f172a', strokeWidth: 2 }}
+                            activeDot={{ r: 6 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
+                      <div className="mb-3 flex items-center gap-3 text-blue-300">
+                        <CalendarClock className="h-5 w-5" />
+                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">First Recorded</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-100">{selectedBatteryStats.firstSeen}</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
+                      <div className="mb-3 flex items-center gap-3 text-cyan-300">
+                        <Gauge className="h-5 w-5" />
+                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Peak Voltage</span>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.maxVoltage}V</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
+                      <div className="mb-3 flex items-center gap-3 text-orange-300">
+                        <TrendingUp className="h-5 w-5" />
+                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Lowest Charge</span>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.minCharge}%</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
+                      <div className="mb-3 flex items-center gap-3 text-emerald-300">
+                        <ShieldCheck className="h-5 w-5" />
+                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Avg Resistance</span>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.averageResistance}mΩ</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-6 xl:h-full">
+                  <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5">
+                    <h4 className="text-lg font-semibold text-gray-100">Snapshot</h4>
+                    <div className="mt-5 space-y-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">Last update</span>
+                        <span className="font-semibold text-gray-100">{selectedBatteryStats.latest.fullTime}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">Recent change</span>
+                        <span className={`font-semibold ${selectedBatteryStats.recentChange > 0 ? 'text-orange-300' : 'text-emerald-300'}`}>
+                          {selectedBatteryStats.recentChange > 0 ? '-' : '+'}
+                          {Math.abs(selectedBatteryStats.recentChange)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">Checkout cycles</span>
+                        <span className="font-semibold text-gray-100">{selectedBatteryStats.cycleCount}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">Current resistance</span>
+                        <span className="font-semibold text-gray-100">{selectedBattery.resistance}mΩ</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-hidden rounded-[28px] border border-white/5 bg-white/[0.03] p-5 xl:flex xl:min-h-0 xl:flex-col">
+                    <h4 className="text-lg font-semibold text-gray-100">Activity Feed</h4>
+                    <BatteryActivityFeed points={selectedBatteryHistory} />
                   </div>
                 </div>
               </div>
