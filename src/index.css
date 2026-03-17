@@ -144,3 +144,80 @@
   box-shadow: inset 4px 4px 8px #0d0f12, inset -4px -4px 8px #2b313b;
   transform: translateY(1px);
 }
+
+.battery-roster {
+  width: 100%;
+}
+
+.battery-roster-header,
+.battery-roster-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.75fr);
+  align-items: center;
+}
+
+.battery-roster-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0 1rem 1rem;
+}
+
+.battery-roster-header > span,
+.battery-roster-cell {
+  padding: 0 1rem;
+}
+
+.battery-roster-list {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0.4rem 0.85rem 0.5rem;
+  margin: 0 -0.85rem -0.5rem;
+}
+
+.battery-roster-button {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(30, 34, 40, 1), rgba(30, 34, 40, 1));
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  transform: translateY(0) scale(1);
+  transition-property: box-shadow, border-color, transform, background-color;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  transition-duration: 280ms;
+  will-change: transform, box-shadow;
+}
+
+.battery-roster-button:hover,
+.battery-roster-button:focus-visible {
+  border-color: rgba(99, 179, 237, 0.2);
+  box-shadow:
+    10px 10px 22px rgba(13, 15, 18, 0.9),
+    -8px -8px 18px rgba(43, 49, 59, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px) scale(1.002);
+}
+
+.battery-roster-button:focus-visible {
+  outline: none;
+}
+
+.battery-roster-cell {
+  min-width: 0;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.battery-roster-cell + .battery-roster-cell {
+  border-left: 1px solid rgba(255, 255, 255, 0.018);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battery-roster-button {
+    transition-duration: 0ms;
+    will-change: auto;
+  }
+}

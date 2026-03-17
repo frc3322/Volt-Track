@@ -324,41 +324,40 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
             Interactive history
           </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/5 text-gray-400 text-sm uppercase tracking-wider">
-                <th className="pb-4 font-semibold px-4">Name</th>
-                <th className="pb-4 font-semibold px-4">Status</th>
-                <th className="pb-4 font-semibold px-4">Voltage</th>
-                <th className="pb-4 font-semibold px-4">Resistance</th>
-                <th className="pb-4 font-semibold px-4">Charge</th>
-                <th className="pb-4 font-semibold px-4">Health</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-300">
+        <div className="pt-1">
+          <div className="battery-roster text-gray-300">
+            <div className="battery-roster-header text-gray-400 text-sm uppercase tracking-wider" aria-hidden="true">
+              <span className="font-semibold">Name</span>
+              <span className="font-semibold">Status</span>
+              <span className="font-semibold">Voltage</span>
+              <span className="font-semibold">Resistance</span>
+              <span className="font-semibold">Charge</span>
+              <span className="font-semibold">Health</span>
+            </div>
+
+            <div className="battery-roster-list">
               {batteries.map((battery) => (
-                <tr
+                <button
                   key={battery.id}
-                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors"
+                  type="button"
+                  className="battery-roster-button"
+                  onClick={() => setSelectedBatteryId(battery.id)}
+                  aria-label={`View history for ${battery.name}`}
                 >
-                  <td className="py-4 px-4 font-medium">
-                    <button
-                      type="button"
-                      className="flex items-center gap-3 text-left"
-                      onClick={() => setSelectedBatteryId(battery.id)}
-                      aria-label={`View history for ${battery.name}`}
-                    >
+                  <div className="battery-roster-cell font-medium">
+                    <div className="flex items-center gap-3">
                       <span>{battery.name}</span>
                       <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">
                         View
                       </span>
-                    </button>
-                  </td>
-                  <td className="py-4 px-4"><Badge status={battery.status}>{battery.status}</Badge></td>
-                  <td className="py-4 px-4 font-mono">{battery.currentVoltage}V</td>
-                  <td className="py-4 px-4 font-mono">{battery.resistance}mΩ</td>
-                  <td className="py-4 px-4">
+                    </div>
+                  </div>
+                  <div className="battery-roster-cell">
+                    <Badge status={battery.status}>{battery.status}</Badge>
+                  </div>
+                  <div className="battery-roster-cell font-mono">{battery.currentVoltage}V</div>
+                  <div className="battery-roster-cell font-mono">{battery.resistance}mΩ</div>
+                  <div className="battery-roster-cell">
                     <div className="flex items-center gap-2">
                       <div className="w-16 h-2 neu-inset rounded-full overflow-hidden">
                         <div
@@ -368,12 +367,12 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                       </div>
                       <span className="text-sm font-mono">{battery.chargeLevel}%</span>
                     </div>
-                  </td>
-                  <td className="py-4 px-4 font-mono">{battery.health}%</td>
-                </tr>
+                  </div>
+                  <div className="battery-roster-cell font-mono">{battery.health}%</div>
+                </button>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </Card>
 
