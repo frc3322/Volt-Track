@@ -44,7 +44,7 @@ const copy = {
   },
 } as const;
 
-export default function BatteryActionForm({ mode, batteries, onSubmit }: Props) {
+export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonly<Props>) {
   const [selectedBattery, setSelectedBattery] = useState('');
   const [voltage, setVoltage] = useState('');
   const [resistance, setResistance] = useState('');

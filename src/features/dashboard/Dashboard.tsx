@@ -74,7 +74,7 @@ function getLogTone(type: BatteryHistoryPoint['type']) {
   }
 }
 
-function BatteryHistoryTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name?: string; value?: number }>; label?: string }) {
+function BatteryHistoryTooltip({ active, payload, label }: Readonly<{ active?: boolean; payload?: Array<{ name?: string; value?: number }>; label?: string }>) {
   if (!active || !payload?.length) {
     return null;
   }
@@ -96,7 +96,7 @@ function BatteryHistoryTooltip({ active, payload, label }: { active?: boolean; p
   );
 }
 
-export default function Dashboard({ batteries, logs }: Props) {
+export default function Dashboard({ batteries, logs }: Readonly<Props>) {
   const [selectedBatteryId, setSelectedBatteryId] = useState<string | null>(null);
 
   const checkedIn = batteries.filter((battery) => battery.status === 'Checked In').length;
@@ -117,7 +117,7 @@ export default function Dashboard({ batteries, logs }: Props) {
     const baseHistory = logs
       .filter((log) => log.batteryId === selectedBattery.id)
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-      .map((log) => {
+      .map<BatteryHistoryPoint>((log) => {
         const formatted = formatTimestamp(log.timestamp);
         return {
           id: log.id,
@@ -133,7 +133,7 @@ export default function Dashboard({ batteries, logs }: Props) {
 
     const needsSnapshot =
       baseHistory.length === 0 ||
-      baseHistory[baseHistory.length - 1].timestamp !== selectedBattery.lastUpdated;
+      baseHistory.at(-1)?.timestamp !== selectedBattery.lastUpdated;
 
     if (needsSnapshot) {
       const formatted = formatTimestamp(selectedBattery.lastUpdated);
@@ -160,8 +160,12 @@ export default function Dashboard({ batteries, logs }: Props) {
     const charges = selectedBatteryHistory.map((point) => point.chargeLevel);
     const voltages = selectedBatteryHistory.map((point) => point.voltage);
     const resistances = selectedBatteryHistory.map((point) => point.resistance);
-    const latest = selectedBatteryHistory[selectedBatteryHistory.length - 1];
-    const previous = selectedBatteryHistory[selectedBatteryHistory.length - 2] ?? latest;
+    const latest = selectedBatteryHistory.at(-1);
+    if (!latest) {
+      return null;
+    }
+
+    const previous = selectedBatteryHistory.at(-2) ?? latest;
     const dischargeDelta = previous.chargeLevel - latest.chargeLevel;
     const cycleCount = selectedBatteryHistory.filter((point) => point.type === 'checkout').length;
 
@@ -263,7 +267,7 @@ export default function Dashboard({ batteries, logs }: Props) {
                   <YAxis allowDecimals={false} stroke="#4a5568" tick={{ fill: '#a0aec0' }} />
                   <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
                   <RechartsTooltip
-                    cursor={{ fill: 'rgba(99, 179, 237, 0.12)', radius: [10, 10, 0, 0] }}
+                    cursor={{ fill: 'rgba(99, 179, 237, 0.12)' }}
                     contentStyle={tooltipCardStyle}
                     itemStyle={{ color: '#63b3ed' }}
                   />
@@ -284,11 +288,17 @@ export default function Dashboard({ batteries, logs }: Props) {
             <div className="space-y-4">
               {getRecentLogs().map((log) => {
                 const battery = batteries.find((entry) => entry.id === log.batteryId);
+                const badgeStatus =
+                  log.type === 'checkin'
+                    ? 'checked in'
+                    : log.type === 'checkout'
+                      ? 'checked out'
+                      : 'default';
                 return (
                   <div key={log.id} className="neu-panel neu-outset-sm p-4 rounded-[15px] flex flex-col gap-2">
                     <div className="flex justify-between items-center gap-3">
                       <span className="font-semibold text-gray-200">{battery?.name || 'Unknown'}</span>
-                      <Badge status={log.type === 'checkin' ? 'checked in' : log.type === 'checkout' ? 'checked out' : 'default'}>
+                      <Badge status={badgeStatus}>
                         {log.type}
                       </Badge>
                     </div>
@@ -330,25 +340,20 @@ export default function Dashboard({ batteries, logs }: Props) {
               {batteries.map((battery) => (
                 <tr
                   key={battery.id}
-                  className="border-b border-white/5 last:border-0 cursor-pointer hover:bg-white/[0.03] transition-colors"
-                  onClick={() => setSelectedBatteryId(battery.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setSelectedBatteryId(battery.id);
-                    }
-                  }}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`View history for ${battery.name}`}
+                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors"
                 >
                   <td className="py-4 px-4 font-medium">
-                    <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      className="flex items-center gap-3 text-left"
+                      onClick={() => setSelectedBatteryId(battery.id)}
+                      aria-label={`View history for ${battery.name}`}
+                    >
                       <span>{battery.name}</span>
                       <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">
                         View
                       </span>
-                    </div>
+                    </button>
                   </td>
                   <td className="py-4 px-4"><Badge status={battery.status}>{battery.status}</Badge></td>
                   <td className="py-4 px-4 font-mono">{battery.currentVoltage}V</td>

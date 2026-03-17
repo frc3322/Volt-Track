@@ -1,8 +1,10 @@
 import {
   ButtonHTMLAttributes,
+  DialogHTMLAttributes,
   HTMLAttributes,
   InputHTMLAttributes,
   KeyboardEvent,
+  MouseEvent,
   ReactNode,
   SelectHTMLAttributes,
   useEffect,
@@ -10,15 +12,17 @@ import {
   useRef,
 } from 'react';
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+type CardProps = Readonly<HTMLAttributes<HTMLDivElement> & { children: ReactNode }>;
+
+export function Card({ children, className = '', ...props }: CardProps) {
   return (
-    <div className={`neu-card ${className}`}>
+    <div className={`neu-card ${className}`} {...props}>
       {children}
     </div>
   );
 }
 
-interface DialogProps extends HTMLAttributes<HTMLDivElement> {
+interface DialogProps extends Omit<DialogHTMLAttributes<HTMLDialogElement>, 'onClose'> {
   children: ReactNode;
   onClose: () => void;
   onEnter?: () => void;
@@ -52,14 +56,14 @@ export function Dialog({
   titleId,
   ...props
 }: DialogProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const fallbackTitleId = useId();
 
   useEffect(() => {
-    contentRef.current?.focus();
+    dialogRef.current?.focus();
   }, []);
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
     if (event.key === 'Escape') {
       event.preventDefault();
       onClose();
@@ -84,37 +88,48 @@ export function Dialog({
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm ${overlayClassName}`}
-      onClick={(event) => {
+      onClick={(event: MouseEvent<HTMLDivElement>) => {
         if (event.target === event.currentTarget) {
           onClose();
         }
       }}
     >
-      <Card
+      <dialog
+        ref={dialogRef}
         {...props}
-        className={contentClassName}
+        open
+        aria-labelledby={titleId ?? fallbackTitleId}
+        className="m-0 border-none bg-transparent p-0 text-inherit shadow-none outline-none backdrop:bg-transparent"
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={handleKeyDown}
       >
-        <div
-          ref={contentRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId ?? fallbackTitleId}
-          tabIndex={-1}
-          onKeyDown={handleKeyDown}
-          className="outline-none"
-        >
+        <Card className={`outline-none ${contentClassName}`}>
           {children}
-        </div>
-      </Card>
+        </Card>
+      </dialog>
     </div>
   );
 }
 
-export function Button({ children, className = '', variant = 'primary', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }) {
+type ButtonProps = Readonly<ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: 'primary' | 'secondary' | 'danger';
+}>;
+
+export function Button({ children, className = '', variant = 'primary', ...props }: ButtonProps) {
+  let variantClassName = 'text-blue-400';
+  if (variant === 'danger') {
+    variantClassName = 'text-red-400';
+  } else if (variant === 'secondary') {
+    variantClassName = 'text-gray-300';
+  }
+
   return (
-    <button 
-      className={`neu-button px-6 py-3 ${className} ${variant === 'primary' ? 'text-blue-400' : variant === 'danger' ? 'text-red-400' : 'text-gray-300'}`}
+    <button
+      className={`neu-button px-6 py-3 ${className} ${variantClassName}`}
       {...props}
     >
       {children}
@@ -122,19 +137,19 @@ export function Button({ children, className = '', variant = 'primary', ...props
   );
 }
 
-export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className = '', ...props }: Readonly<InputHTMLAttributes<HTMLInputElement>>) {
   return (
-    <input 
+    <input
       className={`neu-input w-full ${className}`}
       {...props}
     />
   );
 }
 
-export function Select({ children, className = '', ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ children, className = '', ...props }: Readonly<SelectHTMLAttributes<HTMLSelectElement>>) {
   return (
     <div className="relative w-full">
-      <select 
+      <select
         className={`neu-input w-full appearance-none ${className}`}
         {...props}
       >
@@ -147,7 +162,7 @@ export function Select({ children, className = '', ...props }: SelectHTMLAttribu
   );
 }
 
-export function Label({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function Label({ children, className = '' }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
     <label className={`block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 ${className}`}>
       {children}
@@ -155,7 +170,7 @@ export function Label({ children, className = '' }: { children: ReactNode; class
   );
 }
 
-export function Badge({ children, status }: { children: ReactNode; status: string }) {
+export function Badge({ children, status }: Readonly<{ children: ReactNode; status: string }>) {
   const getColors = () => {
     switch(status.toLowerCase()) {
       case 'checked in': return 'bg-green-500/10 text-green-400 border-green-500/20';

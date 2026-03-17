@@ -26,9 +26,9 @@ describe('BatteryActionForm', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Select Battery' }), 'batt-001');
 
-    const voltageInput = screen.getByRole('spinbutton', { name: 'Voltage (V)' }) as HTMLInputElement;
-    const resistanceInput = screen.getByRole('spinbutton', { name: 'Resistance (mΩ)' }) as HTMLInputElement;
-    const chargeInput = screen.getByRole('spinbutton', { name: 'Charge Level (%)' }) as HTMLInputElement;
+    const voltageInput = screen.getByRole<HTMLInputElement>('spinbutton', { name: 'Voltage (V)' });
+    const resistanceInput = screen.getByRole<HTMLInputElement>('spinbutton', { name: 'Resistance (mΩ)' });
+    const chargeInput = screen.getByRole<HTMLInputElement>('spinbutton', { name: 'Charge Level (%)' });
 
     expect(voltageInput.value).toBe('24.2');
     expect(resistanceInput.value).toBe('12.5');

@@ -23,7 +23,7 @@ const initialFormValues: AddBatteryValues = {
   chargeLevel: '',
 };
 
-export default function ManageBatteriesPanel({ batteries, onAddBattery, onRemoveBattery }: Props) {
+export default function ManageBatteriesPanel({ batteries, onAddBattery, onRemoveBattery }: Readonly<Props>) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [batteryToRemove, setBatteryToRemove] = useState<Battery | null>(null);
   const [formValues, setFormValues] = useState<AddBatteryValues>(initialFormValues);
