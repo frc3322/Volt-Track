@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.wsgi import WSGIMiddleware
+
+from .database import init_db
+from .flask_app import flask_app
+from .repository import (
+    apply_battery_action,
+    create_battery,
+    delete_battery,
+    get_battery,
+    get_summary,
+    list_batteries,
+    list_logs,
+)
+from .schemas import (
+    BatteryAction,
+    BatteryCreate,
+    BatteryResponse,
+    LogResponse,
+    SummaryResponse,
+)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(
+    title="Battery Tracker Backend",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/flask", WSGIMiddleware(flask_app))
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok", "framework": "fastapi"}
+
+
+@app.get("/summary", response_model=SummaryResponse)
+def summary() -> dict:
+    return get_summary()
+
+
+@app.get("/batteries", response_model=list[BatteryResponse])
+def batteries() -> list[dict]:
+    return list_batteries()
+
+
+@app.get("/batteries/{battery_id}", response_model=BatteryResponse)
+def battery(battery_id: str) -> dict:
+    record = get_battery(battery_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Battery not found")
+    return record
+
+
+@app.post("/batteries", response_model=BatteryResponse, status_code=201)
+def add_battery(payload: BatteryCreate) -> dict:
+    return create_battery(
+        name=payload.name,
+        voltage=payload.voltage,
+        resistance=payload.resistance,
+        charge_level=payload.chargeLevel,
+        health=payload.health,
+        status=payload.status,
+    )
+
+
+@app.post("/batteries/{battery_id}/checkout", response_model=BatteryResponse)
+def checkout_battery(battery_id: str, payload: BatteryAction) -> dict:
+    record = apply_battery_action(
+        battery_id=battery_id,
+        voltage=payload.voltage,
+        resistance=payload.resistance,
+        charge_level=payload.chargeLevel,
+        log_type="checkout",
+        next_status="Checked Out",
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Battery not found")
+    return record
+
+
+@app.post("/batteries/{battery_id}/checkin", response_model=BatteryResponse)
+def checkin_battery(battery_id: str, payload: BatteryAction) -> dict:
+    record = apply_battery_action(
+        battery_id=battery_id,
+        voltage=payload.voltage,
+        resistance=payload.resistance,
+        charge_level=payload.chargeLevel,
+        log_type="checkin",
+        next_status="Checked In",
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Battery not found")
+    return record
+
+
+@app.delete("/batteries/{battery_id}", status_code=204)
+def remove_battery(battery_id: str) -> Response:
+    try:
+        deleted = delete_battery(battery_id)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Battery not found")
+    return Response(status_code=204)
+
+
+@app.get("/logs", response_model=list[LogResponse])
+def logs(
+    battery_id: str | None = None,
+    limit: int = Query(default=50, ge=1, le=500),
+) -> list[dict]:
+    return list_logs(battery_id=battery_id, limit=limit)

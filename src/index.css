@@ -1,0 +1,146 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@theme {
+  --color-background: #121418;
+  --color-panel: #1e2228;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-gray-300);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background-color: var(--color-background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #2d3748;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #63b3ed;
+  }
+}
+
+@utility neu-panel {
+  background: var(--color-panel);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+@utility neu-outset {
+  box-shadow: 6px 6px 14px #0d0f12, -6px -6px 14px #2b313b;
+}
+
+@utility neu-outset-sm {
+  box-shadow: 4px 4px 8px #0d0f12, -4px -4px 8px #2b313b;
+}
+
+@utility neu-inset {
+  box-shadow: inset 5px 5px 10px #0d0f12, inset -5px -5px 10px #2b313b;
+}
+
+@utility neu-chip {
+  background: linear-gradient(145deg, #20242b, #1a1e24);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 6px 6px 12px #0d0f12, -6px -6px 12px #2b313b;
+}
+
+@utility neu-button {
+  background: var(--color-panel);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 6px 6px 14px #0d0f12, -6px -6px 14px #2b313b;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  transition-duration: 300ms;
+  border-radius: 15px;
+  font-weight: 500;
+  color: var(--color-gray-300);
+}
+
+.neu-button:hover {
+  color: #63b3ed;
+  box-shadow: 8px 8px 18px #0d0f12, -8px -8px 18px #2b313b, 0 0 10px rgba(99, 179, 237, 0.2);
+  border-color: rgba(99, 179, 237, 0.4);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.neu-button:active {
+  color: #63b3ed;
+  box-shadow: inset 6px 6px 12px #0d0f12, inset -6px -6px 12px #2b313b;
+  transform: translateY(1px);
+}
+
+@utility neu-input {
+  background-color: var(--color-background);
+  box-shadow: inset 5px 5px 10px #0d0f12, inset -5px -5px 10px #2b313b;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  color: var(--color-gray-200);
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.neu-input:focus {
+  outline: none;
+  border-color: rgba(99, 179, 237, 0.5);
+  box-shadow: inset 5px 5px 10px #0d0f12, inset -5px -5px 10px #2b313b, 0 0 10px rgba(99, 179, 237, 0.2);
+  --tw-ring-color: rgba(99, 179, 237, 0.5);
+}
+
+@utility neu-card {
+  background: var(--color-panel);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 6px 6px 14px #0d0f12, -6px -6px 14px #2b313b;
+  border-radius: 15px;
+  padding: 1.5rem;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.neu-card:hover {
+  box-shadow: 8px 8px 18px #0d0f12, -8px -8px 18px #2b313b;
+  transform: translateY(-2px);
+}
+
+@utility neu-tab {
+  background: var(--color-panel);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 4px 4px 8px #0d0f12, -4px -4px 8px #2b313b;
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  color: var(--color-gray-400);
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.neu-tab:hover {
+  color: var(--color-gray-200);
+  transform: translateY(-1px);
+}
+
+.neu-tab[data-active="true"] {
+  color: #63b3ed;
+  box-shadow: inset 4px 4px 8px #0d0f12, inset -4px -4px 8px #2b313b;
+  transform: translateY(1px);
+}
