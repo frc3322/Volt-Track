@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime, timedelta, timezone
+import os
+import sys
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-import os
+
+from platformdirs import user_data_dir
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -37,11 +40,21 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def is_desktop_runtime() -> bool:
+    return os.environ.get("BATTERY_TRACKER_APP_ENV") == "desktop" or getattr(sys, "frozen", False)
+
+
+def get_default_db_path() -> Path:
+    if is_desktop_runtime():
+        return Path(user_data_dir("VoltTrack", "VoltTrack")) / "battery_tracker.db"
+    return DEFAULT_DB_PATH
+
+
 def get_db_path() -> Path:
     configured_path = os.environ.get("BATTERY_TRACKER_DB_PATH")
     if configured_path:
         return Path(configured_path).expanduser().resolve()
-    return DEFAULT_DB_PATH
+    return get_default_db_path()
 
 
 def get_connection() -> sqlite3.Connection:

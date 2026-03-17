@@ -4,6 +4,7 @@ This project has two parts:
 
 - A React + Vite frontend in the repository root
 - A Python backend in `backend/` using FastAPI and SQLite
+- A Tauri desktop shell in `src-tauri/` that launches the backend as a managed sidecar
 
 The frontend talks to the backend at `http://127.0.0.1:8000` by default.
 
@@ -11,6 +12,7 @@ The frontend talks to the backend at `http://127.0.0.1:8000` by default.
 
 - Node.js 18+ and npm
 - Python 3.10+ and pip
+- Rust with Cargo
 
 ## Install dependencies
 
@@ -47,11 +49,36 @@ npm run dev
 
 Vite will print the local frontend URL, which is usually `http://127.0.0.1:5173` or `http://localhost:5173`.
 
+## Run the Tauri desktop app
+
+Build the bundled backend sidecar and launch the desktop shell:
+
+```bash
+npm run tauri:dev
+```
+
+During `tauri dev`, the desktop shell starts the backend from the project `.venv` directly, waits for its health check, and kills it when the desktop app exits. Production desktop builds still package the backend as a standalone sidecar binary.
+
 ## Build the frontend
 
 ```bash
 npm run build
 ```
+
+To build desktop bundles on the current host OS:
+
+```bash
+npm run tauri:build
+```
+
+For explicit host-specific desktop outputs:
+
+```bash
+npm run tauri:build:mac
+npm run tauri:build:windows
+```
+
+Run the mac build on macOS to produce the `.app` bundle, and run the Windows build on Windows to produce `msi` and `nsis` installer artifacts. The backend sidecar is rebuilt for the current target before each desktop build.
 
 To preview the production frontend build locally:
 
@@ -84,6 +111,7 @@ Main API:
 ## Data and notes
 
 - The SQLite database is stored at `backend/data/battery_tracker.db`.
+- In the desktop app, the SQLite database moves to the user application data directory instead of the bundled app resources.
 - On first startup, the backend creates the database and seeds a small set of sample batteries and logs.
 - If you need the frontend to call a different backend URL, set `VITE_API_BASE_URL` before starting Vite.
 - Tests can override the database location with `BATTERY_TRACKER_DB_PATH`.

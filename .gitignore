@@ -5,3 +5,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 backend/data/*.db
+backend/build/
+backend/dist/
+src-tauri/target/
+src-tauri/binaries/*
+!src-tauri/binaries/.gitkeep

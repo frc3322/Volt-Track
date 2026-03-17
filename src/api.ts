@@ -1,6 +1,12 @@
 import { Battery, BatteryActionPayload, BatteryCreatePayload, ExportSnapshot, LogRecord } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+
+let apiBaseUrl = DEFAULT_API_BASE_URL;
+
+export function setApiBaseUrl(baseUrl: string) {
+  apiBaseUrl = baseUrl.replace(/\/$/, '');
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
@@ -8,7 +14,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
     headers,
     ...init,
   });
@@ -67,7 +73,7 @@ export function fetchExportSnapshot(): Promise<ExportSnapshot> {
 
 
 export async function exportDatabaseBackup(): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}/database/export`);
+  const response = await fetch(`${apiBaseUrl}/database/export`);
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(errorText || `Request failed with status ${response.status}`);
@@ -78,7 +84,7 @@ export async function exportDatabaseBackup(): Promise<Blob> {
 
 
 export async function importDatabaseBackup(file: File): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/database/import`, {
+  const response = await fetch(`${apiBaseUrl}/database/import`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/octet-stream',

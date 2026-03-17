@@ -12,6 +12,7 @@ import {
   buildTextReport,
   downloadBlob,
 } from '@/features/settings/exporters';
+import { isDesktopApp } from '@/desktop';
 import { useBatteryTracker } from '@/hooks/useBatteryTracker';
 
 type AppTab = 'dashboard' | 'checkout' | 'checkin' | 'manage';
@@ -76,6 +77,10 @@ function App() {
     downloadBlob(buildPdfReport(snapshot), buildExportFileName('report', 'pdf'));
   };
 
+  const backendErrorMessage = isDesktopApp()
+    ? 'The bundled backend did not start cleanly. Close the app and reopen it.'
+    : 'Unable to reach the backend. Start the API server and reload the page.';
+
   return (
     <div className="min-h-screen px-2 py-4 md:px-3 md:py-8 flex flex-col max-w-7xl mx-auto">
       <header className="flex flex-col md:flex-row items-center justify-between mb-10 pb-6 border-b border-white/5 gap-6">
@@ -124,7 +129,7 @@ function App() {
         )}
         {!isLoading && errorMessage && (
           <div className="neu-card border border-red-500/20 text-red-300">
-            Unable to reach the backend. Start the API server and reload the page.
+            {backendErrorMessage}
             <div className="mt-2 text-sm text-red-200/80">{errorMessage}</div>
           </div>
         )}

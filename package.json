@@ -5,14 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:web",
+    "build:web": "vite build",
     "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:prepare-sidecar": "node scripts/build-tauri-backend.mjs",
+    "tauri:dev": "node scripts/run-tauri-dev.mjs",
+    "tauri:build": "npm run tauri:prepare-sidecar && tauri build",
+    "tauri:build:mac": "npm run tauri:prepare-sidecar && tauri build --bundles app",
+    "tauri:build:windows": "npm run tauri:prepare-sidecar && tauri build --bundles msi,nsis",
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "vitest run",
     "test:frontend:watch": "vitest",
     "test:backend": ".venv/bin/python -m unittest discover -s backend/tests -p 'test_*.py'"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
     "react": "19.2.3",
@@ -23,6 +31,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.17",
+    "@tauri-apps/cli": "^2.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.0.0",

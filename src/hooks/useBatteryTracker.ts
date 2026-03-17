@@ -9,6 +9,7 @@ import {
   importDatabaseBackup as submitDatabaseImport,
   removeBattery as submitRemoval,
 } from '@/api';
+import { isDesktopApp } from '@/desktop';
 import { Battery, BatteryActionPayload, BatteryCreatePayload, LogRecord } from '@/types';
 
 interface TrackerState {
@@ -29,6 +30,13 @@ const initialState: TrackerState = {
   isLoading: true,
   errorMessage: null,
 };
+
+const DESKTOP_LOAD_RETRY_ATTEMPTS = 20;
+const DESKTOP_LOAD_RETRY_DELAY_MS = 250;
+
+function sleep(delayMs: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
+}
 
 export function useBatteryTracker() {
   const [state, setState] = useState<TrackerState>(initialState);
@@ -63,7 +71,30 @@ export function useBatteryTracker() {
 
     const initialize = async () => {
       try {
-        const [batteries, logs] = await Promise.all([fetchBatteries(), fetchLogs()]);
+        let batteries: Battery[] = [];
+        let logs: LogRecord[] = [];
+        let attemptsRemaining = isDesktopApp() ? DESKTOP_LOAD_RETRY_ATTEMPTS : 1;
+        let lastError: unknown = null;
+
+        while (attemptsRemaining > 0) {
+          try {
+            [batteries, logs] = await Promise.all([fetchBatteries(), fetchLogs()]);
+            lastError = null;
+            break;
+          } catch (error) {
+            lastError = error;
+            attemptsRemaining -= 1;
+            if (attemptsRemaining === 0) {
+              throw error;
+            }
+            await sleep(DESKTOP_LOAD_RETRY_DELAY_MS);
+          }
+        }
+
+        if (lastError) {
+          throw lastError;
+        }
+
         if (cancelled) {
           return;
         }
