@@ -65,16 +65,26 @@ function getTargetTriple() {
   return hostLine.replace("host: ", "").trim();
 }
 
-const pyInstallerPath = path.join(
+const venvPythonPath = path.join(
   projectRoot,
   ".venv",
   isWindows ? "Scripts" : "bin",
-  isWindows ? "pyinstaller.exe" : "pyinstaller",
+  isWindows ? "python.exe" : "python",
 );
 
-if (!existsSync(pyInstallerPath)) {
+if (!existsSync(venvPythonPath)) {
   throw new Error(
-    `PyInstaller was not found at ${pyInstallerPath}. Install backend requirements into .venv first.`,
+    `Python virtual environment was not found at ${venvPythonPath}. Install backend requirements into .venv first.`,
+  );
+}
+
+const pyInstallerCheck = spawnSync(venvPythonPath, ["-c", "import PyInstaller"], {
+  cwd: projectRoot,
+});
+
+if (pyInstallerCheck.error || pyInstallerCheck.status !== 0) {
+  throw new Error(
+    `PyInstaller is not installed in ${venvPythonPath}. Install backend requirements into .venv first.`,
   );
 }
 
@@ -95,7 +105,9 @@ mkdirSync(specPath, { recursive: true });
 mkdirSync(cachePath, { recursive: true });
 mkdirSync(binariesDir, { recursive: true });
 
-run(pyInstallerPath, [
+run(venvPythonPath, [
+  "-m",
+  "PyInstaller",
   "--noconfirm",
   "--clean",
   "--onefile",
