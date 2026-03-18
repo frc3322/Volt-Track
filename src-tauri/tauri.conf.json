@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.volttrack.desktop",
   "build": {
-    "beforeBuildCommand": "npm run build:web",
+    "beforeBuildCommand": "npm run tauri:prepare-sidecar && npm run build:web",
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../dist"
@@ -23,7 +23,6 @@
     "active": true,
     "targets": [
       "app",
-      "msi",
       "nsis"
     ],
     "externalBin": [

@@ -78,7 +78,7 @@ npm run tauri:build:mac
 npm run tauri:build:windows
 ```
 
-Run the mac build on macOS to produce the `.app` bundle, and run the Windows build on Windows to produce `msi` and `nsis` installer artifacts. The backend sidecar is rebuilt for the current target before each desktop build.
+Run the mac build on macOS to produce the `.app` bundle, and run the Windows build on Windows to produce the NSIS `.exe` installer. The backend sidecar is rebuilt for the current target before each desktop build, and Tauri's own build step now prepares it automatically as well.
 
 To preview the production frontend build locally:
 

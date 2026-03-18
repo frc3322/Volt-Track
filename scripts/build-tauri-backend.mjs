@@ -26,10 +26,12 @@ function run(command, args, options = {}) {
 }
 
 function getTargetTriple() {
-  const cliTarget = process.argv
-    .slice(2)
+  const cliArgs = process.argv.slice(2);
+  const targetFlagIndex = cliArgs.indexOf("--target");
+  const cliTarget = cliArgs
     .find((argument) => argument.startsWith("--target="))
-    ?.split("=")[1];
+    ?.split("=")[1]
+    ?? (targetFlagIndex >= 0 ? cliArgs[targetFlagIndex + 1] : undefined);
 
   if (cliTarget) {
     return cliTarget;
