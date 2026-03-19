@@ -58,7 +58,34 @@ jobs:
             .venv/bin/python -m pip install -r backend/requirements.txt
           fi
 
-      - name: Build and upload Tauri release artifacts
+      - name: Build macOS release artifact
+        if: matrix.os == 'macos-latest'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_SIGNING_IDENTITY || '-' }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run tauri:build:mac -- ${{ matrix.args }}
+
+      - name: Package macOS release artifact
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          tar -czf src-tauri/target/aarch64-apple-darwin/release/bundle/macos/VoltTrack_aarch64.app.tar.gz \
+            -C src-tauri/target/aarch64-apple-darwin/release/bundle/macos \
+            VoltTrack.app
+
+      - name: Upload macOS release artifact
+        if: matrix.os == 'macos-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: src-tauri/target/aarch64-apple-darwin/release/bundle/macos/VoltTrack_aarch64.app.tar.gz
+
+      - name: Build and upload Windows release artifacts
+        if: matrix.os == 'windows-latest'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
