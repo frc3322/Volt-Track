@@ -12,7 +12,7 @@
     "tauri:prepare-sidecar": "node scripts/build-tauri-backend.mjs",
     "tauri:dev": "node scripts/run-tauri-dev.mjs",
     "tauri:build": "node scripts/build-tauri-desktop.mjs",
-    "tauri:build:mac": "tauri build --bundles app",
+    "tauri:build:mac": "node scripts/build-tauri-mac.mjs",
     "tauri:build:windows": "tauri build --bundles nsis",
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "vitest run",
