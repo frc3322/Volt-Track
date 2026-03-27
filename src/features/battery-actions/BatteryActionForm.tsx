@@ -24,7 +24,7 @@ const copy = {
     placeholder: {
       voltage: '24.2',
       resistance: '12.5',
-      chargeLevel: '100',
+      chargeLevel: '200',
     },
   },
   checkin: {
@@ -139,7 +139,7 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
               <Input
                 type="number"
                 min="0"
-                max="100"
+                max="200"
                 required
                 aria-label="Charge Level (%)"
                 value={chargeLevel}

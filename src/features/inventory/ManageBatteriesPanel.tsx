@@ -205,11 +205,11 @@ export default function ManageBatteriesPanel({ batteries, onAddBattery, onRemove
                   required
                   type="number"
                   min="0"
-                  max="100"
+                  max="200"
                   aria-label="Charge Level (%)"
                   value={formValues.chargeLevel}
                   onChange={(e) => setFormValues({ ...formValues, chargeLevel: e.target.value })}
-                  placeholder="100"
+                  placeholder="200"
                 />
               </div>
 

@@ -36,11 +36,13 @@ describe('ManageBatteriesPanel', () => {
     await user.type(within(dialog).getByRole('textbox', { name: 'Battery Name' }), 'Field Pack Delta');
     await user.type(within(dialog).getByRole('spinbutton', { name: 'Voltage (V)' }), '21.9');
     await user.type(within(dialog).getByRole('spinbutton', { name: 'Resistance (mΩ)' }), '9.8');
-    await user.type(within(dialog).getByRole('spinbutton', { name: 'Charge Level (%)' }), '88');
+    const chargeInput = within(dialog).getByRole<HTMLInputElement>('spinbutton', { name: 'Charge Level (%)' });
+    expect(chargeInput.getAttribute('max')).toBe('200');
+    await user.type(chargeInput, '200');
     await user.click(within(dialog).getByRole('button', { name: 'Create Battery' }));
 
     await waitFor(() => {
-      expect(onAddBattery).toHaveBeenCalledWith('Field Pack Delta', 21.9, 9.8, 88);
+      expect(onAddBattery).toHaveBeenCalledWith('Field Pack Delta', 21.9, 9.8, 200);
     });
   });
 });

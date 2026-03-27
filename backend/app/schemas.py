@@ -13,7 +13,7 @@ class BatteryBase(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     voltage: float = Field(gt=0)
     resistance: float = Field(ge=0)
-    chargeLevel: int = Field(ge=0, le=100)
+    chargeLevel: int = Field(ge=0, le=200)
 
 
 class BatteryCreate(BatteryBase):
@@ -24,7 +24,7 @@ class BatteryCreate(BatteryBase):
 class BatteryAction(BaseModel):
     voltage: float = Field(gt=0)
     resistance: float = Field(ge=0)
-    chargeLevel: int = Field(ge=0, le=100)
+    chargeLevel: int = Field(ge=0, le=200)
 
 
 class BatteryResponse(BaseModel):

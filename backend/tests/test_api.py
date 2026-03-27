@@ -50,14 +50,14 @@ class BatteryTrackerApiTests(unittest.TestCase):
                 name="Field Pack Delta",
                 voltage=22.1,
                 resistance=10.2,
-                chargeLevel=92,
+                chargeLevel=200,
             )
         )
         battery_id = created_battery["id"]
 
         checked_out = checkout_battery(
             battery_id,
-            BatteryAction(voltage=21.4, resistance=11.1, chargeLevel=70),
+            BatteryAction(voltage=21.4, resistance=11.1, chargeLevel=200),
         )
         self.assertEqual(checked_out["status"], "Checked Out")
 

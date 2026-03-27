@@ -29,6 +29,7 @@ describe('BatteryActionForm', () => {
     const voltageInput = screen.getByRole<HTMLInputElement>('spinbutton', { name: 'Voltage (V)' });
     const resistanceInput = screen.getByRole<HTMLInputElement>('spinbutton', { name: 'Resistance (mΩ)' });
     const chargeInput = screen.getByRole<HTMLInputElement>('spinbutton', { name: 'Charge Level (%)' });
+    expect(chargeInput.getAttribute('max')).toBe('200');
 
     expect(voltageInput.value).toBe('24.2');
     expect(resistanceInput.value).toBe('12.5');
@@ -39,9 +40,9 @@ describe('BatteryActionForm', () => {
     await user.clear(resistanceInput);
     await user.type(resistanceInput, '11.9');
     await user.clear(chargeInput);
-    await user.type(chargeInput, '87');
+    await user.type(chargeInput, '200');
     await user.click(screen.getByRole('button', { name: 'Confirm Checkout' }));
 
-    expect(onSubmit).toHaveBeenCalledWith('batt-001', 23.8, 11.9, 87);
+    expect(onSubmit).toHaveBeenCalledWith('batt-001', 23.8, 11.9, 200);
   });
 });

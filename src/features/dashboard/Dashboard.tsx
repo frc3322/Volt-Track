@@ -309,14 +309,14 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
   };
 
   const chargeDistributionData = [
-    { range: '0-20%', count: 0 },
-    { range: '21-40%', count: 0 },
-    { range: '41-60%', count: 0 },
-    { range: '61-80%', count: 0 },
-    { range: '81-100%', count: 0 },
+    { range: '0-40%', count: 0 },
+    { range: '41-80%', count: 0 },
+    { range: '81-120%', count: 0 },
+    { range: '121-160%', count: 0 },
+    { range: '161-200%', count: 0 },
   ].map((bucket, index) => {
-    const min = index * 20;
-    const max = index === 0 ? 20 : (index + 1) * 20;
+    const min = index * 40;
+    const max = index === 0 ? 40 : (index + 1) * 40;
 
     return {
       ...bucket,
@@ -478,7 +478,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                       <div className="w-16 h-2 neu-inset rounded-full overflow-hidden">
                         <div
                           className={`h-full ${battery.chargeLevel > 20 ? 'bg-blue-400' : 'bg-red-400'} transition-all`}
-                          style={{ width: `${battery.chargeLevel}%` }}
+                          style={{ width: `${Math.min((battery.chargeLevel / 200) * 100, 100)}%` }}
                         />
                       </div>
                       <span className="text-sm font-mono">{battery.chargeLevel}%</span>
@@ -570,7 +570,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                           />
                           <YAxis
                             yAxisId="charge"
-                            domain={[0, 100]}
+                            domain={[0, 200]}
                             stroke="#4a5568"
                             tick={{ fill: '#a0aec0', fontSize: 12 }}
                             tickFormatter={(value) => `${value}%`}
