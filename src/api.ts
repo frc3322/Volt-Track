@@ -1,4 +1,4 @@
-import { Battery, BatteryActionPayload, BatteryCreatePayload, ExportSnapshot, LogRecord } from './types';
+import { Battery, BatteryActionPayload, BatteryCreatePayload, ExportSnapshot, LogRecord, LogUpdatePayload } from './types';
 
 const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
 
@@ -124,5 +124,18 @@ export async function importDatabaseBackup(file: File): Promise<void> {
 export function clearDatabase(): Promise<void> {
   return request<void>('/database/clear', {
     method: 'POST',
+  });
+}
+
+export function updateLog(logId: string, payload: LogUpdatePayload): Promise<LogRecord> {
+  return request<LogRecord>(`/logs/${logId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteLog(logId: string): Promise<void> {
+  return request<void>(`/logs/${logId}`, {
+    method: 'DELETE',
   });
 }

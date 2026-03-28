@@ -183,6 +183,7 @@ export function useBatteryTracker() {
 
   return {
     ...state,
+    loadData,
     addBattery,
     removeBattery,
     checkoutBattery,

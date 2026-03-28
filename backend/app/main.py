@@ -12,12 +12,14 @@ from .services import (
     clear_database,
     create_battery,
     delete_battery,
+    delete_log_entry,
     export_snapshot,
     get_battery_by_id,
     get_summary,
     import_database,
     list_batteries,
     list_logs,
+    update_log_entry,
 )
 from .schemas import (
     BatteryAction,
@@ -26,6 +28,7 @@ from .schemas import (
     DatabaseMutationResponse,
     ExportSnapshotResponse,
     LogResponse,
+    LogUpdate,
     SummaryResponse,
 )
 
@@ -164,3 +167,27 @@ def logs(
     limit: int | None = Query(default=None, ge=1, le=500),
 ) -> list[dict]:
     return list_logs(battery_id=battery_id, limit=limit)
+
+
+@app.put("/logs/{log_id}", response_model=LogResponse)
+def update_log(log_id: str, payload: LogUpdate) -> dict:
+    record = update_log_entry(
+        log_id=log_id,
+        timestamp=payload.timestamp,
+        log_type=payload.type,
+        voltage=payload.voltage,
+        resistance=payload.resistance,
+        charge_level=payload.chargeLevel,
+        health=payload.health,
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Log not found")
+    return record
+
+
+@app.delete("/logs/{log_id}", status_code=204)
+def delete_log(log_id: str) -> Response:
+    deleted = delete_log_entry(log_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Log not found")
+    return Response(status_code=204)

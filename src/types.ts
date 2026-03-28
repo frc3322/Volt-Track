@@ -35,6 +35,15 @@ export interface BatteryCreatePayload extends BatteryActionPayload {
 }
 
 
+export interface LogUpdatePayload {
+  timestamp: string;
+  type: 'checkout' | 'checkin' | 'add';
+  voltage: number;
+  resistance: number;
+  chargeLevel: number;
+  health: HealthStatus | null;
+}
+
 export interface ExportSnapshot {
   exportedAt: string;
   batteries: Battery[];

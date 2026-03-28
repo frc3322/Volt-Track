@@ -88,6 +88,7 @@
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
   color: var(--color-gray-200);
+  cursor: text;
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;

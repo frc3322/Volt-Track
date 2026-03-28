@@ -68,3 +68,12 @@ class SummaryResponse(BaseModel):
     checkedIn: int
     checkedOut: int
     fleetHealth: str | None
+
+
+class LogUpdate(BaseModel):
+    timestamp: str
+    type: LogType
+    voltage: float = Field(gt=0)
+    resistance: float = Field(ge=0)
+    chargeLevel: int = Field(ge=0, le=200)
+    health: HealthStatus | None = None

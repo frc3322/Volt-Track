@@ -8,13 +8,16 @@ from .repository import (
     apply_action,
     clear_database as clear_database_records,
     delete_battery as delete_battery_record,
+    delete_log as delete_log_record,
     get_battery,
     get_battery_status,
+    get_log,
     get_summary as fetch_summary,
     insert_battery,
     insert_log,
     list_batteries as fetch_batteries,
     list_logs as fetch_logs,
+    update_log as update_log_record,
 )
 
 
@@ -154,6 +157,39 @@ def import_database(contents: bytes) -> dict:
         "batteryCount": len(list_batteries()),
         "logCount": len(list_logs(limit=None)),
     }
+
+
+def get_log_by_id(log_id: str) -> dict | None:
+    row = get_log(log_id)
+    return _log_row_to_dict(row) if row else None
+
+
+def update_log_entry(
+    log_id: str,
+    *,
+    timestamp: str,
+    log_type: str,
+    voltage: float,
+    resistance: float,
+    charge_level: int,
+    health: str | None,
+) -> dict | None:
+    success = update_log_record(
+        log_id=log_id,
+        timestamp=timestamp,
+        log_type=log_type,
+        voltage=voltage,
+        resistance=resistance,
+        charge_level=charge_level,
+        health=health,
+    )
+    if not success:
+        return None
+    return get_log_by_id(log_id)
+
+
+def delete_log_entry(log_id: str) -> bool:
+    return delete_log_record(log_id)
 
 
 def clear_database() -> dict:

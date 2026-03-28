@@ -191,3 +191,41 @@ def get_battery_status(battery_id: str) -> str | None:
             (battery_id,),
         ).fetchone()
     return row["status"] if row else None
+
+
+def get_log(log_id: str) -> sqlite3.Row | None:
+    with get_connection() as connection:
+        return connection.execute(
+            "SELECT * FROM logs WHERE id = ?",
+            (log_id,),
+        ).fetchone()
+
+
+def update_log(
+    *,
+    log_id: str,
+    timestamp: str,
+    log_type: str,
+    voltage: float,
+    resistance: float,
+    charge_level: int,
+    health: str | None = None,
+) -> bool:
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            UPDATE logs
+            SET timestamp = ?, type = ?, voltage = ?, resistance = ?, charge_level = ?, health = ?
+            WHERE id = ?
+            """,
+            (timestamp, log_type, voltage, resistance, charge_level, health, log_id),
+        )
+        connection.commit()
+    return cursor.rowcount > 0
+
+
+def delete_log(log_id: str) -> bool:
+    with get_connection() as connection:
+        cursor = connection.execute("DELETE FROM logs WHERE id = ?", (log_id,))
+        connection.commit()
+    return cursor.rowcount > 0

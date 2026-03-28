@@ -13,6 +13,7 @@ import {
   ComposedChart,
   Line,
   Area,
+  ReferenceDot,
 } from 'recharts';
 import {
   Activity,
@@ -35,6 +36,7 @@ interface Props {
 
 interface BatteryHistoryPoint {
   id: string;
+  dataIndex: number;
   timestamp: string;
   shortTime: string;
   fullTime: string;
@@ -78,14 +80,16 @@ function getLogTone(type: BatteryHistoryPoint['type']) {
   }
 }
 
-function BatteryHistoryTooltip({ active, payload, label }: Readonly<{ active?: boolean; payload?: Array<{ name?: string; value?: number }>; label?: string }>) {
+function BatteryHistoryTooltip({ active, payload }: Readonly<{ active?: boolean; payload?: ReadonlyArray<{ name?: string; value?: number; payload?: BatteryHistoryPoint }>; label?: string }>) {
   if (!active || !payload?.length) {
     return null;
   }
 
+  const shortTime = payload[0]?.payload?.shortTime ?? '';
+
   return (
     <div className="min-w-[170px] p-3 shadow-2xl" style={tooltipCardStyle}>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">{label}</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">{shortTime}</p>
       <div className="space-y-1 text-sm">
         {payload.map((entry) => (
           <div key={entry.name} className="flex items-center justify-between gap-3 text-gray-200">
@@ -238,6 +242,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
   const [selectedBatteryLogs, setSelectedBatteryLogs] = useState<LogRecord[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [chartHoverIndex, setChartHoverIndex] = useState<number | null>(null);
 
   const checkedIn = batteries.filter((battery) => battery.status === 'Checked In').length;
   const inUse = batteries.filter((battery) => battery.status === 'Checked Out').length;
@@ -295,10 +300,11 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
     const baseHistory = selectedBatteryLogs
       .slice()
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-      .map<BatteryHistoryPoint>((log) => {
+      .map<BatteryHistoryPoint>((log, i) => {
         const formatted = formatTimestamp(log.timestamp);
         return {
           id: log.id,
+          dataIndex: i,
           timestamp: log.timestamp,
           shortTime: formatted.short,
           fullTime: formatted.full,
@@ -318,6 +324,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
       const formatted = formatTimestamp(selectedBattery.lastUpdated);
       baseHistory.push({
         id: `${selectedBattery.id}-snapshot`,
+        dataIndex: baseHistory.length,
         timestamp: selectedBattery.lastUpdated,
         shortTime: formatted.short,
         fullTime: formatted.full,
@@ -637,7 +644,18 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                         </div>
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={selectedBatteryHistory} margin={{ top: 16, right: 60, left: 0, bottom: 0 }}>
+                          <ComposedChart
+                            data={selectedBatteryHistory}
+                            margin={{ top: 16, right: 60, left: 0, bottom: 0 }}
+                            onMouseMove={(state) => {
+                              if (state.isTooltipActive && typeof state.activeTooltipIndex === 'number') {
+                                setChartHoverIndex(state.activeTooltipIndex);
+                              } else {
+                                setChartHoverIndex(null);
+                              }
+                            }}
+                            onMouseLeave={() => setChartHoverIndex(null)}
+                          >
                             <defs>
                               <linearGradient id="batteryChargeFill" x1="0" x2="0" y1="0" y2="1">
                                 <stop offset="0%" stopColor="#63b3ed" stopOpacity={0.3} />
@@ -646,10 +664,11 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                             </defs>
                             <CartesianGrid stroke="#2d3748" strokeDasharray="3 3" vertical={false} />
                             <XAxis
-                              dataKey="shortTime"
+                              dataKey="dataIndex"
                               stroke="#4a5568"
                               tick={{ fill: '#a0aec0', fontSize: 12 }}
                               minTickGap={20}
+                              tickFormatter={(value: number) => selectedBatteryHistory[value]?.shortTime ?? ''}
                             />
                             <YAxis
                               yAxisId="charge"
@@ -674,7 +693,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                               tickFormatter={(value) => `${value.toFixed(3)}`}
                               width={52}
                             />
-                            <RechartsTooltip content={BatteryHistoryTooltip} isAnimationActive={false} />
+                            <RechartsTooltip content={(props) => <BatteryHistoryTooltip active={props.active} payload={props.payload as Parameters<typeof BatteryHistoryTooltip>[0]['payload']} />} isAnimationActive={false} />
                             <Area
                               yAxisId="charge"
                               type="monotone"
@@ -692,7 +711,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                               stroke="#67e8f9"
                               strokeWidth={3}
                               dot={{ r: 4, fill: '#67e8f9', stroke: '#0f172a', strokeWidth: 2 }}
-                              activeDot={{ r: 6 }}
+                              activeDot={false}
                             />
                             <Line
                               yAxisId="resistance"
@@ -702,8 +721,35 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                               stroke="#fb923c"
                               strokeWidth={2}
                               dot={{ r: 3, fill: '#fb923c', stroke: '#0f172a', strokeWidth: 2 }}
-                              activeDot={{ r: 5 }}
+                              activeDot={false}
                             />
+                            {chartHoverIndex !== null && selectedBatteryHistory[chartHoverIndex] && (() => {
+                              const pt = selectedBatteryHistory[chartHoverIndex];
+                              return (
+                                <>
+                                  <ReferenceDot
+                                    yAxisId="voltage"
+                                    x={pt.dataIndex}
+                                    y={pt.voltage}
+                                    r={6}
+                                    fill="#67e8f9"
+                                    stroke="#0f172a"
+                                    strokeWidth={2}
+                                    ifOverflow="visible"
+                                  />
+                                  <ReferenceDot
+                                    yAxisId="resistance"
+                                    x={pt.dataIndex}
+                                    y={pt.resistance}
+                                    r={5}
+                                    fill="#fb923c"
+                                    stroke="#0f172a"
+                                    strokeWidth={2}
+                                    ifOverflow="visible"
+                                  />
+                                </>
+                              );
+                            })()}
                           </ComposedChart>
                         </ResponsiveContainer>
                       )}

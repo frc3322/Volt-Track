@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { BatteryFull, BarChart3, LogIn, LogOut, Settings2, Zap } from 'lucide-react';
+import { BatteryFull, BarChart3, ClipboardEdit, LogIn, LogOut, Settings2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { exportDatabaseBackup, fetchExportSnapshot } from '@/api';
 import BatteryActionForm from '@/features/battery-actions/BatteryActionForm';
 import Dashboard from '@/features/dashboard/Dashboard';
+import EditHistoryPanel from '@/features/history/EditHistoryPanel';
 import ManageBatteriesPanel from '@/features/inventory/ManageBatteriesPanel';
 import SettingsPanel from '@/features/settings/SettingsPanel';
 import {
@@ -16,13 +17,14 @@ import { isDesktopApp } from '@/desktop';
 import { useBatteryTracker } from '@/hooks/useBatteryTracker';
 import { HealthStatus } from '@/types';
 
-type AppTab = 'dashboard' | 'checkout' | 'checkin' | 'manage';
+type AppTab = 'dashboard' | 'checkout' | 'checkin' | 'manage' | 'history';
 
 const tabs = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
   { id: 'checkout', label: 'Check Out', icon: LogOut },
   { id: 'checkin', label: 'Check In', icon: LogIn },
   { id: 'manage', label: 'Manage', icon: BatteryFull },
+  { id: 'history', label: 'Edit History', icon: ClipboardEdit },
 ] as const satisfies ReadonlyArray<{
   id: AppTab;
   label: string;
@@ -43,6 +45,7 @@ function App() {
     checkoutBattery,
     importDatabase,
     clearDatabase,
+    loadData,
   } = useBatteryTracker();
 
   const handleCheckout = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: HealthStatus | undefined) => {
@@ -156,6 +159,12 @@ function App() {
                 batteries={batteries}
                 onAddBattery={addBattery}
                 onRemoveBattery={removeBattery}
+              />
+            )}
+            {activeTab === 'history' && (
+              <EditHistoryPanel
+                batteries={batteries}
+                onDataChanged={loadData}
               />
             )}
           </>
