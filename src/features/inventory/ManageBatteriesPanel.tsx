@@ -111,7 +111,7 @@ export default function ManageBatteriesPanel({ batteries, onAddBattery, onRemove
                     <span>{battery.currentVoltage}V</span>
                     <span>{battery.resistance}mΩ</span>
                     <span>{battery.chargeLevel}% charge</span>
-                    <span>{battery.health}% health</span>
+                    <span className="capitalize">{battery.health} health</span>
                   </div>
                 </div>
 

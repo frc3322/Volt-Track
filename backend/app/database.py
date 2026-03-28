@@ -80,7 +80,7 @@ def init_db() -> None:
                 current_voltage REAL NOT NULL,
                 resistance REAL NOT NULL,
                 charge_level INTEGER NOT NULL,
-                health INTEGER NOT NULL,
+                health TEXT NOT NULL,
                 last_updated TEXT NOT NULL
             );
 
@@ -92,13 +92,14 @@ def init_db() -> None:
                 voltage REAL NOT NULL,
                 resistance REAL NOT NULL,
                 charge_level INTEGER NOT NULL,
-                health INTEGER,
+                health TEXT,
                 FOREIGN KEY (battery_id) REFERENCES batteries(id) ON DELETE CASCADE
             );
             """
         )
 
         add_health_column_if_missing(connection)
+        migrate_health_to_strings(connection)
 
         if not has_batteries_table:
             seed_database(connection)
@@ -111,8 +112,35 @@ def add_health_column_if_missing(connection: sqlite3.Connection) -> None:
         for row in connection.execute("PRAGMA table_info(logs)").fetchall()
     }
     if "health" not in columns:
-        connection.execute("ALTER TABLE logs ADD COLUMN health INTEGER")
+        connection.execute("ALTER TABLE logs ADD COLUMN health TEXT")
         connection.commit()
+
+
+def migrate_health_to_strings(connection: sqlite3.Connection) -> None:
+    health_to_string_sql = """
+        CASE
+            WHEN CAST(health AS INTEGER) >= 67 THEN 'good'
+            WHEN CAST(health AS INTEGER) >= 34 THEN 'fair'
+            ELSE 'bad'
+        END
+    """
+    connection.execute(
+        f"""
+        UPDATE batteries
+        SET health = {health_to_string_sql}
+        WHERE health NOT IN ('good', 'fair', 'bad')
+        AND health IS NOT NULL
+        """
+    )
+    connection.execute(
+        f"""
+        UPDATE logs
+        SET health = {health_to_string_sql}
+        WHERE health NOT IN ('good', 'fair', 'bad')
+        AND health IS NOT NULL
+        """
+    )
+    connection.commit()
 
 
 def normalize_legacy_statuses(connection: sqlite3.Connection) -> None:
@@ -136,17 +164,17 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.2,
             12.5,
             95,
-            98,
+            "good",
             (now - timedelta(hours=2)).isoformat(),
         ),
         (
             "batt-002",
             "Drone Pack Bravo",
             "Checked Out",
-            24.1,   # matches checkout log
-            13.5,   # matches checkout log
-            98,     # matches checkout log
-            92,
+            24.1,
+            13.5,
+            98,
+            "good",
             (now - timedelta(hours=24)).isoformat(),
         ),
         (
@@ -156,7 +184,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             48.6,
             8.2,
             100,
-            99,
+            "good",
             (now - timedelta(hours=5)).isoformat(),
         ),
         (
@@ -166,7 +194,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             14.8,
             18.0,
             15,
-            85,
+            "fair",
             (now - timedelta(minutes=30)).isoformat(),
         ),
     ]
@@ -180,7 +208,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.8,
             12.0,
             100,
-            98,
+            "good",
         ),
         (
             "log-add-002",
@@ -190,7 +218,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.8,
             13.5,
             100,
-            100,
+            "good",
         ),
         (
             "log-add-003",
@@ -200,7 +228,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             48.6,
             8.2,
             100,
-            99,
+            "good",
         ),
         (
             "log-add-004",
@@ -210,7 +238,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             14.8,
             18.0,
             15,
-            85,
+            "fair",
         ),
         # Checkout / checkin logs
         (
@@ -221,7 +249,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.5,
             12.0,
             100,
-            98,
+            "good",
         ),
         (
             "log-2",
@@ -231,7 +259,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.2,
             12.5,
             95,
-            98,
+            "good",
         ),
         (
             "log-3",
@@ -241,7 +269,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.1,
             13.5,
             98,
-            92,
+            "good",
         ),
     ]
 

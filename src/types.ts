@@ -1,4 +1,5 @@
 export type BatteryStatus = 'Checked In' | 'Checked Out';
+export type HealthStatus = 'good' | 'fair' | 'bad';
 
 export interface Battery {
   id: string;
@@ -7,7 +8,7 @@ export interface Battery {
   currentVoltage: number;
   resistance: number;
   chargeLevel: number;
-  health: number; // 0-100
+  health: HealthStatus;
   lastUpdated: string;
 }
 
@@ -19,14 +20,14 @@ export interface LogRecord {
   voltage: number;
   resistance: number;
   chargeLevel: number;
-  health: number | null;
+  health: HealthStatus | null;
 }
 
 export interface BatteryActionPayload {
   voltage: number;
   resistance: number;
   chargeLevel: number;
-  health?: number;
+  health?: HealthStatus;
 }
 
 export interface BatteryCreatePayload extends BatteryActionPayload {

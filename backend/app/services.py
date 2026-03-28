@@ -63,7 +63,7 @@ def create_battery(
     voltage: float,
     resistance: float,
     charge_level: int,
-    health: int,
+    health: str,
     status: str,
 ) -> dict:
     battery_id = f"batt-{uuid4().hex[:10]}"
@@ -100,7 +100,7 @@ def apply_battery_action(
     charge_level: int,
     log_type: str,
     next_status: str,
-    health: int | None = None,
+    health: str | None = None,
 ) -> dict | None:
     timestamp = utc_now_iso()
     success = apply_action(
@@ -134,7 +134,7 @@ def get_summary() -> dict:
         "totalBatteries": summary["total"],
         "checkedIn": summary["checked_in"],
         "checkedOut": summary["checked_out"],
-        "averageHealth": summary["average_health"],
+        "fleetHealth": summary["fleet_health"],
     }
 
 

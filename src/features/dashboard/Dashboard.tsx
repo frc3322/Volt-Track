@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { fetchBatteryLogs } from '@/api';
 import { Badge, Card, Dialog } from '@/components/ui';
-import { Battery, LogRecord } from '@/types';
+import { Battery, HealthStatus, LogRecord } from '@/types';
 import {
   ResponsiveContainer,
   BarChart,
@@ -42,7 +42,7 @@ interface BatteryHistoryPoint {
   voltage: number;
   resistance: number;
   chargeLevel: number;
-  health: number | null;
+  health: HealthStatus | null;
 }
 
 const tooltipCardStyle = {
@@ -202,7 +202,7 @@ function BatteryActivityFeed({ points }: Readonly<{ points: BatteryHistoryPoint[
                 <div>
                   <p className="text-gray-500">Health</p>
                   {point.health !== null ? (
-                    <p className="font-semibold text-gray-100">{point.health}%</p>
+                    <p className="font-semibold text-gray-100 capitalize">{point.health}</p>
                   ) : (
                     <p className="flex items-center gap-1 font-semibold text-gray-500" title="Health not recorded for this event">
                       <HelpCircle className="h-3 w-3" />
@@ -365,11 +365,15 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
     return [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5);
   };
 
-  const getAvgHealth = () => {
-    if (batteries.length === 0) return 0;
-    return Math.round(
-      batteries.reduce((acc, curr) => acc + curr.health, 0) / batteries.length,
-    );
+  const getFleetHealth = (): string => {
+    if (batteries.length === 0) return '--';
+    const counts = batteries.reduce<Record<string, number>>((acc, b) => {
+      acc[b.health] = (acc[b.health] ?? 0) + 1;
+      return acc;
+    }, {});
+    if ((counts['bad'] ?? 0) > 0) return 'Bad';
+    if ((counts['fair'] ?? 0) > 0) return 'Fair';
+    return 'Good';
   };
 
   const chargeDistributionData = [
@@ -430,8 +434,8 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
             <AlertCircle className="w-8 h-8" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Avg Health</p>
-            <p className="text-3xl font-bold text-gray-100">{getAvgHealth()}%</p>
+            <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Fleet Health</p>
+            <p className="text-3xl font-bold text-gray-100">{getFleetHealth()}</p>
           </div>
         </Card>
       </div>
@@ -553,7 +557,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                       <span className="text-sm font-mono">{battery.chargeLevel}%</span>
                     </div>
                   </div>
-                  <div className="battery-roster-cell font-mono">{battery.health}%</div>
+                  <div className="battery-roster-cell font-mono capitalize">{battery.health}</div>
                 </button>
               ))}
             </div>
@@ -597,7 +601,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Health</p>
-                  <p className="mt-2 text-2xl font-bold text-emerald-300">{selectedBattery.health}%</p>
+                  <p className="mt-2 text-2xl font-bold text-emerald-300 capitalize">{selectedBattery.health}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Recorded Events</p>

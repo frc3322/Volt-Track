@@ -12,7 +12,7 @@ const batteries: Battery[] = [
     currentVoltage: 24.2,
     resistance: 12.5,
     chargeLevel: 95,
-    health: 98,
+    health: 'good',
     lastUpdated: '2026-03-17T12:00:00Z',
   },
 ];
@@ -43,6 +43,6 @@ describe('BatteryActionForm', () => {
     await user.type(chargeInput, '200');
     await user.click(screen.getByRole('button', { name: 'Confirm Checkout' }));
 
-    expect(onSubmit).toHaveBeenCalledWith('batt-001', 23.8, 11.9, 200);
+    expect(onSubmit).toHaveBeenCalledWith('batt-001', 23.8, 11.9, 200, 'good');
   });
 });

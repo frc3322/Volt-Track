@@ -48,9 +48,15 @@ function buildReportLines(snapshot: ExportSnapshot): ReportLine[] {
   const batteryLookup = new Map(snapshot.batteries.map((battery) => [battery.id, battery.name]));
   const checkedIn = snapshot.batteries.filter((battery) => battery.status === 'Checked In').length;
   const checkedOut = snapshot.batteries.length - checkedIn;
-  const averageHealth = snapshot.batteries.length === 0
-    ? 0
-    : Math.round(snapshot.batteries.reduce((sum, battery) => sum + battery.health, 0) / snapshot.batteries.length);
+  const healthCounts = snapshot.batteries.reduce<Record<string, number>>((acc, b) => {
+    acc[b.health] = (acc[b.health] ?? 0) + 1;
+    return acc;
+  }, {});
+  const fleetHealth = snapshot.batteries.length === 0
+    ? 'N/A'
+    : (healthCounts['bad'] ?? 0) > 0 ? 'Bad'
+    : (healthCounts['fair'] ?? 0) > 0 ? 'Fair'
+    : 'Good';
 
   const lines: ReportLine[] = [
     { text: 'VoltTrack Battery Report', variant: 'title' },
@@ -61,7 +67,7 @@ function buildReportLines(snapshot: ExportSnapshot): ReportLine[] {
     { text: `Total batteries: ${snapshot.batteries.length}`, variant: 'body' },
     { text: `Checked in: ${checkedIn}`, variant: 'body' },
     { text: `Checked out: ${checkedOut}`, variant: 'body' },
-    { text: `Average health: ${averageHealth}%`, variant: 'body' },
+    { text: `Fleet health: ${fleetHealth}`, variant: 'body' },
     { text: '', variant: 'spacer' },
     { text: 'Inventory', variant: 'heading' },
   ];
@@ -76,7 +82,7 @@ function buildReportLines(snapshot: ExportSnapshot): ReportLine[] {
       lines.push({ text: `   Voltage: ${formatMetric(battery.currentVoltage, ' V')}`, variant: 'body' });
       lines.push({ text: `   Resistance: ${formatMetric(battery.resistance, ' mOhm')}`, variant: 'body' });
       lines.push({ text: `   Charge: ${battery.chargeLevel}%`, variant: 'body' });
-      lines.push({ text: `   Health: ${battery.health}%`, variant: 'body' });
+      lines.push({ text: `   Health: ${battery.health.charAt(0).toUpperCase()}${battery.health.slice(1)}`, variant: 'body' });
       lines.push({ text: `   Last updated: ${formatDisplayTimestamp(battery.lastUpdated)}`, variant: 'body' });
       lines.push({ text: '', variant: 'spacer' });
     });

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { AlertCircle, CheckCircle, LogIn, LogOut } from 'lucide-react';
 import { Button, Card, Input, Label, Select } from '@/components/ui';
-import { Battery } from '@/types';
+import { Battery, HealthStatus } from '@/types';
 
 type BatteryActionMode = 'checkin' | 'checkout';
 
 interface Props {
   mode: BatteryActionMode;
   batteries: Battery[];
-  onSubmit: (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: number | undefined) => Promise<void>;
+  onSubmit: (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: HealthStatus | undefined) => Promise<void>;
 }
 
 const copy = {
@@ -70,7 +70,7 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
     setVoltage(battery.currentVoltage.toString());
     setResistance(battery.resistance.toString());
     setChargeLevel(battery.chargeLevel.toString());
-    setHealth(battery.health.toString());
+    setHealth(battery.health);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -84,7 +84,7 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
       Number(voltage),
       Number(resistance),
       Number(chargeLevel),
-      health !== '' ? Number(health) : undefined,
+      health !== '' ? health as HealthStatus : undefined,
     );
   };
 
@@ -169,21 +169,17 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
               </div>
             </div>
             <div>
-              <Label>Health (%) <span className="text-gray-600 normal-case tracking-normal font-normal">optional</span></Label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  aria-label="Health (%)"
-                  value={health}
-                  onChange={(event) => setHealth(event.target.value)}
-                  placeholder="100"
-                  className="pr-12"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">%</span>
-              </div>
+              <Label>Health <span className="text-gray-600 normal-case tracking-normal font-normal">optional</span></Label>
+              <Select
+                aria-label="Health"
+                value={health}
+                onChange={(event) => setHealth(event.target.value)}
+              >
+                <option value="">Select health...</option>
+                <option value="good">Good</option>
+                <option value="fair">Fair</option>
+                <option value="bad">Bad</option>
+              </Select>
             </div>
           </div>
 

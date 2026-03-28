@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 BatteryStatus = Literal["Checked In", "Checked Out"]
 LogType = Literal["checkout", "checkin", "add"]
+HealthStatus = Literal["good", "fair", "bad"]
 
 
 class BatteryBase(BaseModel):
@@ -17,7 +18,7 @@ class BatteryBase(BaseModel):
 
 
 class BatteryCreate(BatteryBase):
-    health: int = Field(default=100, ge=0, le=100)
+    health: HealthStatus = "good"
     status: BatteryStatus = "Checked In"
 
 
@@ -25,7 +26,7 @@ class BatteryAction(BaseModel):
     voltage: float = Field(gt=0)
     resistance: float = Field(ge=0)
     chargeLevel: int = Field(ge=0, le=200)
-    health: int | None = Field(default=None, ge=0, le=100)
+    health: HealthStatus | None = None
 
 
 class BatteryResponse(BaseModel):
@@ -35,7 +36,7 @@ class BatteryResponse(BaseModel):
     currentVoltage: float
     resistance: float
     chargeLevel: int
-    health: int
+    health: HealthStatus
     lastUpdated: str
 
 
@@ -47,7 +48,7 @@ class LogResponse(BaseModel):
     voltage: float
     resistance: float
     chargeLevel: int
-    health: int | None = None
+    health: HealthStatus | None = None
 
 
 class ExportSnapshotResponse(BaseModel):
@@ -66,4 +67,4 @@ class SummaryResponse(BaseModel):
     totalBatteries: int
     checkedIn: int
     checkedOut: int
-    averageHealth: int
+    fleetHealth: str | None

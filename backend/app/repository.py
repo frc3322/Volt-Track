@@ -47,7 +47,7 @@ def insert_battery(
     voltage: float,
     resistance: float,
     charge_level: int,
-    health: int,
+    health: str,
     last_updated: str,
 ) -> None:
     with get_connection() as connection:
@@ -79,7 +79,7 @@ def insert_log(
     resistance: float,
     charge_level: int,
     log_type: str,
-    health: int | None = None,
+    health: str | None = None,
 ) -> None:
     with get_connection() as connection:
         connection.execute(
@@ -99,7 +99,7 @@ def update_battery(
     voltage: float,
     resistance: float,
     charge_level: int,
-    health: int | None = None,
+    health: str | None = None,
     last_updated: str,
 ) -> bool:
     with get_connection() as connection:
@@ -123,7 +123,7 @@ def apply_action(
     voltage: float,
     resistance: float,
     charge_level: int,
-    health: int | None,
+    health: str | None,
     last_updated: str,
     log_id: str,
     log_type: str,
@@ -165,22 +165,22 @@ def clear_database() -> None:
         connection.commit()
 
 
-def get_summary() -> dict[str, int]:
+def get_summary() -> dict:
     with get_connection() as connection:
         rows = connection.execute(
             "SELECT status, COUNT(*) AS count FROM batteries GROUP BY status"
         ).fetchall()
         total = connection.execute("SELECT COUNT(*) FROM batteries").fetchone()[0]
-        avg_health = connection.execute(
-            "SELECT COALESCE(ROUND(AVG(health)), 0) FROM batteries"
-        ).fetchone()[0]
+        fleet_health_row = connection.execute(
+            "SELECT health FROM batteries WHERE health IS NOT NULL GROUP BY health ORDER BY COUNT(*) DESC LIMIT 1"
+        ).fetchone()
 
     counts = {row["status"]: row["count"] for row in rows}
     return {
         "total": total,
         "checked_in": counts.get("Checked In", 0),
         "checked_out": counts.get("Checked Out", 0),
-        "average_health": int(avg_health),
+        "fleet_health": fleet_health_row["health"] if fleet_health_row else None,
     }
 
 

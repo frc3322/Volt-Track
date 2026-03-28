@@ -14,6 +14,7 @@ import {
 } from '@/features/settings/exporters';
 import { isDesktopApp } from '@/desktop';
 import { useBatteryTracker } from '@/hooks/useBatteryTracker';
+import { HealthStatus } from '@/types';
 
 type AppTab = 'dashboard' | 'checkout' | 'checkin' | 'manage';
 
@@ -44,14 +45,14 @@ function App() {
     clearDatabase,
   } = useBatteryTracker();
 
-  const handleCheckout = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: number | undefined) => {
+  const handleCheckout = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: HealthStatus | undefined) => {
     const updated = await checkoutBattery(batteryId, { voltage, resistance, chargeLevel, health });
     if (updated) {
       setActiveTab('dashboard');
     }
   };
 
-  const handleCheckin = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: number | undefined) => {
+  const handleCheckin = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: HealthStatus | undefined) => {
     const updated = await checkinBattery(batteryId, { voltage, resistance, chargeLevel, health });
     if (updated) {
       setActiveTab('dashboard');
