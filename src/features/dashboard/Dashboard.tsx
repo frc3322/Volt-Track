@@ -10,7 +10,7 @@ import {
   YAxis,
   Tooltip as RechartsTooltip,
   CartesianGrid,
-  LineChart,
+  ComposedChart,
   Line,
   Area,
 } from 'recharts';
@@ -632,7 +632,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                         </div>
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={selectedBatteryHistory} margin={{ top: 16, right: 18, left: 0, bottom: 0 }}>
+                          <ComposedChart data={selectedBatteryHistory} margin={{ top: 16, right: 18, left: 0, bottom: 0 }}>
                             <defs>
                               <linearGradient id="batteryChargeFill" x1="0" x2="0" y1="0" y2="1">
                                 <stop offset="0%" stopColor="#63b3ed" stopOpacity={0.3} />
@@ -680,7 +680,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                               dot={{ r: 4, fill: '#67e8f9', stroke: '#0f172a', strokeWidth: 2 }}
                               activeDot={{ r: 6 }}
                             />
-                          </LineChart>
+                          </ComposedChart>
                         </ResponsiveContainer>
                       )}
                     </div>
