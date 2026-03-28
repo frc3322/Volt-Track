@@ -159,6 +159,6 @@ def remove_battery(battery_id: str) -> Response:
 @app.get("/logs", response_model=list[LogResponse])
 def logs(
     battery_id: str | None = None,
-    limit: int = Query(default=50, ge=1, le=500),
+    limit: int | None = Query(default=None, ge=1, le=500),
 ) -> list[dict]:
     return list_logs(battery_id=battery_id, limit=limit)

@@ -17,6 +17,7 @@ from backend.app.main import (
     checkout_battery,
     health,
     import_database_file,
+    logs,
     remove_battery,
     snapshot,
     summary,
@@ -92,3 +93,38 @@ class BatteryTrackerApiTests(unittest.TestCase):
         self.assertEqual(restored["batteryCount"], len(original_snapshot["batteries"]))
         self.assertEqual(restored["logCount"], len(original_snapshot["logs"]))
         self.assertEqual(summary()["totalBatteries"], len(original_snapshot["batteries"]))
+
+    def test_logs_endpoint_can_return_complete_history_for_a_single_battery(self) -> None:
+        created_battery = add_battery(
+            BatteryCreate(
+                name="History Pack",
+                voltage=12.0,
+                resistance=10.0,
+                chargeLevel=130,
+            )
+        )
+        battery_id = created_battery["id"]
+
+        for index in range(60):
+            checkout_battery(
+                battery_id,
+                BatteryAction(
+                    voltage=12.0 - (index * 0.01),
+                    resistance=10.0 + index,
+                    chargeLevel=max(0, 130 - index),
+                ),
+            )
+            checkin_battery(
+                battery_id,
+                BatteryAction(
+                    voltage=11.9 - (index * 0.01),
+                    resistance=10.5 + index,
+                    chargeLevel=max(0, 129 - index),
+                ),
+            )
+
+        full_history = logs(battery_id=battery_id, limit=None)
+        recent_history = logs(battery_id=battery_id, limit=50)
+
+        self.assertGreater(len(full_history), len(recent_history))
+        self.assertEqual(len(full_history), 121)

@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { fetchBatteryLogs } from '@/api';
 import { Badge, Card, Dialog } from '@/components/ui';
 import { Battery, LogRecord } from '@/types';
 import {
@@ -214,6 +215,9 @@ function BatteryActivityFeed({ points }: Readonly<{ points: BatteryHistoryPoint[
 
 export default function Dashboard({ batteries, logs }: Readonly<Props>) {
   const [selectedBatteryId, setSelectedBatteryId] = useState<string | null>(null);
+  const [selectedBatteryLogs, setSelectedBatteryLogs] = useState<LogRecord[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   const checkedIn = batteries.filter((battery) => battery.status === 'Checked In').length;
   const inUse = batteries.filter((battery) => battery.status === 'Checked Out').length;
@@ -225,13 +229,51 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
     [batteries, selectedBatteryId],
   );
 
+  useEffect(() => {
+    if (!selectedBatteryId) {
+      setSelectedBatteryLogs([]);
+      setIsHistoryLoading(false);
+      setHistoryError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setSelectedBatteryLogs([]);
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+
+    void fetchBatteryLogs(selectedBatteryId)
+      .then((history) => {
+        if (cancelled) {
+          return;
+        }
+        setSelectedBatteryLogs(history);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+        setHistoryError(error instanceof Error ? error.message : 'Unable to load battery history.');
+      })
+      .finally(() => {
+        if (cancelled) {
+          return;
+        }
+        setIsHistoryLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBatteryId]);
+
   const selectedBatteryHistory = useMemo<BatteryHistoryPoint[]>(() => {
     if (!selectedBattery) {
       return [];
     }
 
-    const baseHistory = logs
-      .filter((log) => log.batteryId === selectedBattery.id)
+    const baseHistory = selectedBatteryLogs
+      .slice()
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       .map<BatteryHistoryPoint>((log) => {
         const formatted = formatTimestamp(log.timestamp);
@@ -266,7 +308,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
     }
 
     return baseHistory;
-  }, [logs, selectedBattery]);
+  }, [selectedBattery, selectedBatteryLogs]);
 
   const selectedBatteryStats = useMemo(() => {
     if (!selectedBattery || selectedBatteryHistory.length === 0) {
@@ -457,7 +499,12 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                   key={battery.id}
                   type="button"
                   className="battery-roster-button"
-                  onClick={() => setSelectedBatteryId(battery.id)}
+                  onClick={() => {
+                    setSelectedBatteryLogs([]);
+                    setIsHistoryLoading(true);
+                    setHistoryError(null);
+                    setSelectedBatteryId(battery.id);
+                  }}
                   aria-label={`View history for ${battery.name}`}
                 >
                   <div className="battery-roster-cell font-medium">
@@ -492,7 +539,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
         </div>
       </Card>
 
-      {selectedBattery && selectedBatteryStats && (
+      {selectedBattery && (
         <Dialog
           onClose={() => setSelectedBatteryId(null)}
           onEnter={() => setSelectedBatteryId(null)}
@@ -532,7 +579,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Recorded Events</p>
-                  <p className="mt-2 text-2xl font-bold text-gray-100">{selectedBatteryStats.eventCount}</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-100">{selectedBatteryStats?.eventCount ?? selectedBatteryHistory.length}</p>
                 </div>
               </div>
             </div>
@@ -553,57 +600,67 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                     </div>
 
                     <div className="h-[320px] rounded-[22px] neu-inset p-4">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={selectedBatteryHistory} margin={{ top: 16, right: 18, left: 0, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="batteryChargeFill" x1="0" x2="0" y1="0" y2="1">
-                              <stop offset="0%" stopColor="#63b3ed" stopOpacity={0.3} />
-                              <stop offset="100%" stopColor="#63b3ed" stopOpacity={0.02} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid stroke="#2d3748" strokeDasharray="3 3" vertical={false} />
-                          <XAxis
-                            dataKey="shortTime"
-                            stroke="#4a5568"
-                            tick={{ fill: '#a0aec0', fontSize: 12 }}
-                            minTickGap={20}
-                          />
-                          <YAxis
-                            yAxisId="charge"
-                            domain={[0, 200]}
-                            stroke="#4a5568"
-                            tick={{ fill: '#a0aec0', fontSize: 12 }}
-                            tickFormatter={(value) => `${value}%`}
-                          />
-                          <YAxis
-                            yAxisId="voltage"
-                            orientation="right"
-                            stroke="#4a5568"
-                            tick={{ fill: '#67e8f9', fontSize: 12 }}
-                            tickFormatter={(value) => `${value}V`}
-                          />
-                          <RechartsTooltip content={<BatteryHistoryTooltip />} />
-                          <Area
-                            yAxisId="charge"
-                            type="monotone"
-                            dataKey="chargeLevel"
-                            name="Charge"
-                            stroke="#63b3ed"
-                            fill="url(#batteryChargeFill)"
-                            strokeWidth={2}
-                          />
-                          <Line
-                            yAxisId="voltage"
-                            type="monotone"
-                            dataKey="voltage"
-                            name="Voltage"
-                            stroke="#67e8f9"
-                            strokeWidth={3}
-                            dot={{ r: 4, fill: '#67e8f9', stroke: '#0f172a', strokeWidth: 2 }}
-                            activeDot={{ r: 6 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+                      {isHistoryLoading ? (
+                        <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                          Loading battery history...
+                        </div>
+                      ) : historyError ? (
+                        <div className="flex h-full items-center justify-center text-sm font-medium text-red-300">
+                          {historyError}
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={selectedBatteryHistory} margin={{ top: 16, right: 18, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="batteryChargeFill" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stopColor="#63b3ed" stopOpacity={0.3} />
+                                <stop offset="100%" stopColor="#63b3ed" stopOpacity={0.02} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid stroke="#2d3748" strokeDasharray="3 3" vertical={false} />
+                            <XAxis
+                              dataKey="shortTime"
+                              stroke="#4a5568"
+                              tick={{ fill: '#a0aec0', fontSize: 12 }}
+                              minTickGap={20}
+                            />
+                            <YAxis
+                              yAxisId="charge"
+                              domain={[0, 200]}
+                              stroke="#4a5568"
+                              tick={{ fill: '#a0aec0', fontSize: 12 }}
+                              tickFormatter={(value) => `${value}%`}
+                            />
+                            <YAxis
+                              yAxisId="voltage"
+                              orientation="right"
+                              stroke="#4a5568"
+                              tick={{ fill: '#67e8f9', fontSize: 12 }}
+                              tickFormatter={(value) => `${value}V`}
+                            />
+                            <RechartsTooltip content={<BatteryHistoryTooltip />} />
+                            <Area
+                              yAxisId="charge"
+                              type="monotone"
+                              dataKey="chargeLevel"
+                              name="Charge"
+                              stroke="#63b3ed"
+                              fill="url(#batteryChargeFill)"
+                              strokeWidth={2}
+                            />
+                            <Line
+                              yAxisId="voltage"
+                              type="monotone"
+                              dataKey="voltage"
+                              name="Voltage"
+                              stroke="#67e8f9"
+                              strokeWidth={3}
+                              dot={{ r: 4, fill: '#67e8f9', stroke: '#0f172a', strokeWidth: 2 }}
+                              activeDot={{ r: 6 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
 
@@ -613,7 +670,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                         <CalendarClock className="h-5 w-5" />
                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">First Recorded</span>
                       </div>
-                      <p className="text-sm font-semibold text-gray-100">{selectedBatteryStats.firstSeen}</p>
+                      <p className="text-sm font-semibold text-gray-100">{selectedBatteryStats?.firstSeen ?? 'Loading history...'}</p>
                     </div>
 
                     <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
@@ -621,7 +678,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                         <Gauge className="h-5 w-5" />
                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Peak Voltage</span>
                       </div>
-                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.maxVoltage}V</p>
+                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats ? `${selectedBatteryStats.maxVoltage}V` : '--'}</p>
                     </div>
 
                     <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
@@ -629,7 +686,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                         <TrendingUp className="h-5 w-5" />
                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Lowest Charge</span>
                       </div>
-                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.minCharge}%</p>
+                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats ? `${selectedBatteryStats.minCharge}%` : '--'}</p>
                     </div>
 
                     <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
@@ -637,7 +694,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                         <ShieldCheck className="h-5 w-5" />
                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Avg Resistance</span>
                       </div>
-                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats.averageResistance}mΩ</p>
+                      <p className="text-2xl font-bold text-gray-100">{selectedBatteryStats ? `${selectedBatteryStats.averageResistance}mΩ` : '--'}</p>
                     </div>
                   </div>
                 </div>
@@ -648,18 +705,22 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                     <div className="mt-5 space-y-4">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-400">Last update</span>
-                        <span className="font-semibold text-gray-100">{selectedBatteryStats.latest.fullTime}</span>
+                        <span className="font-semibold text-gray-100">{selectedBatteryStats?.latest.fullTime ?? 'Loading history...'}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-400">Recent change</span>
-                        <span className={`font-semibold ${selectedBatteryStats.recentChange > 0 ? 'text-orange-300' : 'text-emerald-300'}`}>
-                          {selectedBatteryStats.recentChange > 0 ? '-' : '+'}
-                          {Math.abs(selectedBatteryStats.recentChange)}%
-                        </span>
+                        {selectedBatteryStats ? (
+                          <span className={`font-semibold ${selectedBatteryStats.recentChange > 0 ? 'text-orange-300' : 'text-emerald-300'}`}>
+                            {selectedBatteryStats.recentChange > 0 ? '-' : '+'}
+                            {Math.abs(selectedBatteryStats.recentChange)}%
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-gray-100">--</span>
+                        )}
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-400">Checkout cycles</span>
-                        <span className="font-semibold text-gray-100">{selectedBatteryStats.cycleCount}</span>
+                        <span className="font-semibold text-gray-100">{selectedBatteryStats?.cycleCount ?? '--'}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-400">Current resistance</span>
@@ -670,7 +731,13 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
 
                   <div className="overflow-hidden rounded-[28px] border border-white/5 bg-white/[0.03] p-5 xl:flex xl:min-h-0 xl:flex-col">
                     <h4 className="text-lg font-semibold text-gray-100">Activity Feed</h4>
-                    <BatteryActivityFeed points={selectedBatteryHistory} />
+                    {isHistoryLoading ? (
+                      <div className="mt-5 text-sm text-gray-500">Loading battery history...</div>
+                    ) : historyError ? (
+                      <div className="mt-5 text-sm text-red-300">{historyError}</div>
+                    ) : (
+                      <BatteryActivityFeed points={selectedBatteryHistory} />
+                    )}
                   </div>
                 </div>
               </div>

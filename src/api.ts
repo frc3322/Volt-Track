@@ -4,6 +4,11 @@ const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.
 
 let apiBaseUrl = DEFAULT_API_BASE_URL;
 
+interface FetchLogsOptions {
+  batteryId?: string;
+  limit?: number;
+}
+
 export function setApiBaseUrl(baseUrl: string) {
   apiBaseUrl = baseUrl.replace(/\/$/, '');
 }
@@ -35,8 +40,25 @@ export function fetchBatteries(): Promise<Battery[]> {
   return request<Battery[]>('/batteries');
 }
 
-export function fetchLogs(limit = 100): Promise<LogRecord[]> {
-  return request<LogRecord[]>(`/logs?limit=${limit}`);
+export function fetchLogs(options: FetchLogsOptions = {}): Promise<LogRecord[]> {
+  const params = new URLSearchParams();
+  if (options.batteryId) {
+    params.set('battery_id', options.batteryId);
+  }
+  if (typeof options.limit === 'number') {
+    params.set('limit', options.limit.toString());
+  }
+
+  const query = params.toString();
+  return request<LogRecord[]>(query ? `/logs?${query}` : '/logs');
+}
+
+export function fetchRecentLogs(limit = 100): Promise<LogRecord[]> {
+  return fetchLogs({ limit });
+}
+
+export function fetchBatteryLogs(batteryId: string): Promise<LogRecord[]> {
+  return fetchLogs({ batteryId });
 }
 
 export function createBattery(payload: BatteryCreatePayload): Promise<Battery> {

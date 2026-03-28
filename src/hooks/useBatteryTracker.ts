@@ -5,7 +5,7 @@ import {
   checkoutBattery as submitCheckout,
   createBattery,
   fetchBatteries,
-  fetchLogs,
+  fetchRecentLogs,
   importDatabaseBackup as submitDatabaseImport,
   removeBattery as submitRemoval,
 } from '@/api';
@@ -42,7 +42,7 @@ export function useBatteryTracker() {
   const [state, setState] = useState<TrackerState>(initialState);
 
   const loadData = async () => {
-    const [batteries, logs] = await Promise.all([fetchBatteries(), fetchLogs()]);
+    const [batteries, logs] = await Promise.all([fetchBatteries(), fetchRecentLogs()]);
     setState((current) => ({
       ...current,
       batteries,
@@ -78,7 +78,7 @@ export function useBatteryTracker() {
 
         while (attemptsRemaining > 0) {
           try {
-            [batteries, logs] = await Promise.all([fetchBatteries(), fetchLogs()]);
+            [batteries, logs] = await Promise.all([fetchBatteries(), fetchRecentLogs()]);
             lastError = null;
             break;
           } catch (error) {
