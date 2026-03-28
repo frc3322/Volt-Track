@@ -91,7 +91,7 @@ function BatteryHistoryTooltip({ active, payload, label }: Readonly<{ active?: b
           <div key={entry.name} className="flex items-center justify-between gap-3 text-gray-200">
             <span className="text-gray-400">{entry.name}</span>
             <span className="font-semibold">
-              {entry.name === 'Charge' ? `${entry.value}%` : `${entry.value}V`}
+              {entry.name === 'Charge' ? `${entry.value}%` : entry.name === 'Resistance' ? `${entry.value}mΩ` : `${entry.value}V`}
             </span>
           </div>
         ))}
@@ -617,11 +617,12 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                     <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                       <div>
                         <h4 className="text-lg font-semibold text-gray-100">Performance Timeline</h4>
-                        <p className="text-sm text-gray-400">Charge and voltage across every recorded event.</p>
+                        <p className="text-sm text-gray-400">Charge, voltage, and resistance across every recorded event.</p>
                       </div>
                       <div className="flex flex-wrap gap-2 text-xs">
                         <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 font-semibold text-blue-300">Charge %</span>
                         <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 font-semibold text-cyan-300">Voltage</span>
+                        <span className="rounded-full border border-orange-400/20 bg-orange-500/10 px-3 py-1 font-semibold text-orange-300">Resistance</span>
                       </div>
                     </div>
 
@@ -636,7 +637,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                         </div>
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={selectedBatteryHistory} margin={{ top: 16, right: 18, left: 0, bottom: 0 }}>
+                          <ComposedChart data={selectedBatteryHistory} margin={{ top: 16, right: 60, left: 0, bottom: 0 }}>
                             <defs>
                               <linearGradient id="batteryChargeFill" x1="0" x2="0" y1="0" y2="1">
                                 <stop offset="0%" stopColor="#63b3ed" stopOpacity={0.3} />
@@ -664,6 +665,15 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                               tick={{ fill: '#67e8f9', fontSize: 12 }}
                               tickFormatter={(value) => `${value}V`}
                             />
+                            <YAxis
+                              yAxisId="resistance"
+                              orientation="right"
+                              domain={[0.01, 0.025]}
+                              stroke="#4a5568"
+                              tick={{ fill: '#fb923c', fontSize: 11 }}
+                              tickFormatter={(value) => `${value.toFixed(3)}`}
+                              width={52}
+                            />
                             <RechartsTooltip content={<BatteryHistoryTooltip />} />
                             <Area
                               yAxisId="charge"
@@ -683,6 +693,16 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                               strokeWidth={3}
                               dot={{ r: 4, fill: '#67e8f9', stroke: '#0f172a', strokeWidth: 2 }}
                               activeDot={{ r: 6 }}
+                            />
+                            <Line
+                              yAxisId="resistance"
+                              type="monotone"
+                              dataKey="resistance"
+                              name="Resistance"
+                              stroke="#fb923c"
+                              strokeWidth={2}
+                              dot={{ r: 3, fill: '#fb923c', stroke: '#0f172a', strokeWidth: 2 }}
+                              activeDot={{ r: 5 }}
                             />
                           </ComposedChart>
                         </ResponsiveContainer>
