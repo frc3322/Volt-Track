@@ -674,7 +674,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
                               tickFormatter={(value) => `${value.toFixed(3)}`}
                               width={52}
                             />
-                            <RechartsTooltip content={<BatteryHistoryTooltip />} />
+                            <RechartsTooltip content={BatteryHistoryTooltip} isAnimationActive={false} />
                             <Area
                               yAxisId="charge"
                               type="monotone"
