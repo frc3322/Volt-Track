@@ -92,24 +92,35 @@ def init_db() -> None:
                 voltage REAL NOT NULL,
                 resistance REAL NOT NULL,
                 charge_level INTEGER NOT NULL,
+                health INTEGER,
                 FOREIGN KEY (battery_id) REFERENCES batteries(id) ON DELETE CASCADE
             );
             """
         )
+
+        add_health_column_if_missing(connection)
 
         if not has_batteries_table:
             seed_database(connection)
         normalize_legacy_statuses(connection)
 
 
+def add_health_column_if_missing(connection: sqlite3.Connection) -> None:
+    columns = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(logs)").fetchall()
+    }
+    if "health" not in columns:
+        connection.execute("ALTER TABLE logs ADD COLUMN health INTEGER")
+        connection.commit()
+
+
 def normalize_legacy_statuses(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
         UPDATE batteries
-        SET status = CASE
-            WHEN status = 'Checked Out' THEN 'Checked Out'
-            ELSE 'Checked In'
-        END
+        SET status = 'Checked In'
+        WHERE status NOT IN ('Checked In', 'Checked Out')
         """
     )
     connection.commit()
@@ -132,11 +143,11 @@ def seed_database(connection: sqlite3.Connection) -> None:
             "batt-002",
             "Drone Pack Bravo",
             "Checked Out",
-            22.8,
-            14.1,
-            45,
+            24.1,   # matches checkout log
+            13.5,   # matches checkout log
+            98,     # matches checkout log
             92,
-            (now - timedelta(days=1)).isoformat(),
+            (now - timedelta(hours=24)).isoformat(),
         ),
         (
             "batt-003",
@@ -160,6 +171,48 @@ def seed_database(connection: sqlite3.Connection) -> None:
         ),
     ]
     logs = [
+        # Add logs — one per battery at initial entry time
+        (
+            "log-add-001",
+            "batt-001",
+            (now - timedelta(hours=72)).isoformat(),
+            "add",
+            24.8,
+            12.0,
+            100,
+            98,
+        ),
+        (
+            "log-add-002",
+            "batt-002",
+            (now - timedelta(hours=96)).isoformat(),
+            "add",
+            24.8,
+            13.5,
+            100,
+            100,
+        ),
+        (
+            "log-add-003",
+            "batt-003",
+            (now - timedelta(hours=5)).isoformat(),
+            "add",
+            48.6,
+            8.2,
+            100,
+            99,
+        ),
+        (
+            "log-add-004",
+            "batt-004",
+            (now - timedelta(minutes=30)).isoformat(),
+            "add",
+            14.8,
+            18.0,
+            15,
+            85,
+        ),
+        # Checkout / checkin logs
         (
             "log-1",
             "batt-001",
@@ -168,6 +221,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.5,
             12.0,
             100,
+            98,
         ),
         (
             "log-2",
@@ -177,6 +231,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.2,
             12.5,
             95,
+            98,
         ),
         (
             "log-3",
@@ -186,6 +241,7 @@ def seed_database(connection: sqlite3.Connection) -> None:
             24.1,
             13.5,
             98,
+            92,
         ),
     ]
 
@@ -200,8 +256,8 @@ def seed_database(connection: sqlite3.Connection) -> None:
     connection.executemany(
         """
         INSERT INTO logs (
-            id, battery_id, timestamp, type, voltage, resistance, charge_level
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            id, battery_id, timestamp, type, voltage, resistance, charge_level, health
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         logs,
     )

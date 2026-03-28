@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   Gauge,
+  HelpCircle,
   ShieldCheck,
   TrendingUp,
   Zap,
@@ -41,6 +42,7 @@ interface BatteryHistoryPoint {
   voltage: number;
   resistance: number;
   chargeLevel: number;
+  health: number | null;
 }
 
 const tooltipCardStyle = {
@@ -172,12 +174,19 @@ function BatteryActivityFeed({ points }: Readonly<{ points: BatteryHistoryPoint[
           {points.slice().reverse().map((point) => (
             <div key={point.id} data-activity-card className="rounded-2xl neu-inset p-4">
               <div className="mb-2 flex items-start justify-between gap-3">
-                <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${getLogTone(point.type)}`}>
-                  {point.type}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${getLogTone(point.type)}`}>
+                    {point.type === 'snapshot' ? 'current' : point.type}
+                  </span>
+                  {point.type === 'snapshot' && (
+                    <span title="Live snapshot — no log event recorded" className="text-indigo-400 opacity-60">
+                      <HelpCircle className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs text-gray-500">{point.fullTime}</span>
               </div>
-              <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
                 <div>
                   <p className="text-gray-500">Charge</p>
                   <p className="font-semibold text-gray-100">{point.chargeLevel}%</p>
@@ -189,6 +198,17 @@ function BatteryActivityFeed({ points }: Readonly<{ points: BatteryHistoryPoint[
                 <div>
                   <p className="text-gray-500">Resistance</p>
                   <p className="font-semibold text-gray-100">{point.resistance}mΩ</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Health</p>
+                  {point.health !== null ? (
+                    <p className="font-semibold text-gray-100">{point.health}%</p>
+                  ) : (
+                    <p className="flex items-center gap-1 font-semibold text-gray-500" title="Health not recorded for this event">
+                      <HelpCircle className="h-3 w-3" />
+                      <span>--</span>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -286,6 +306,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
           voltage: log.voltage,
           resistance: log.resistance,
           chargeLevel: log.chargeLevel,
+          health: log.health ?? null,
         };
       });
 
@@ -304,6 +325,7 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
         voltage: selectedBattery.currentVoltage,
         resistance: selectedBattery.resistance,
         chargeLevel: selectedBattery.chargeLevel,
+        health: selectedBattery.health,
       });
     }
 
@@ -344,9 +366,9 @@ export default function Dashboard({ batteries, logs }: Readonly<Props>) {
   };
 
   const getAvgHealth = () => {
-    if (checkedOutBatteries.length === 0) return 0;
+    if (batteries.length === 0) return 0;
     return Math.round(
-      checkedOutBatteries.reduce((acc, curr) => acc + curr.health, 0) / checkedOutBatteries.length,
+      batteries.reduce((acc, curr) => acc + curr.health, 0) / batteries.length,
     );
   };
 

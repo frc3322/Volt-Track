@@ -19,12 +19,14 @@ export interface LogRecord {
   voltage: number;
   resistance: number;
   chargeLevel: number;
+  health: number | null;
 }
 
 export interface BatteryActionPayload {
   voltage: number;
   resistance: number;
   chargeLevel: number;
+  health?: number;
 }
 
 export interface BatteryCreatePayload extends BatteryActionPayload {

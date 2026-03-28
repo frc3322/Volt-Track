@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from .database import init_db, replace_database_file, utc_now_iso
 from .repository import (
+    apply_action,
     clear_database as clear_database_records,
     delete_battery as delete_battery_record,
     get_battery,
@@ -14,7 +15,6 @@ from .repository import (
     insert_log,
     list_batteries as fetch_batteries,
     list_logs as fetch_logs,
-    update_battery,
 )
 
 
@@ -40,6 +40,7 @@ def _log_row_to_dict(row: sqlite3.Row) -> dict:
         "voltage": row["voltage"],
         "resistance": row["resistance"],
         "chargeLevel": row["charge_level"],
+        "health": row["health"],
     }
 
 
@@ -52,7 +53,7 @@ def get_battery_by_id(battery_id: str) -> dict | None:
     return _battery_row_to_dict(row) if row else None
 
 
-def list_logs(battery_id: str | None = None, limit: int | None = 50) -> list[dict]:
+def list_logs(battery_id: str | None = None, limit: int | None = None) -> list[dict]:
     return [_log_row_to_dict(row) for row in fetch_logs(battery_id=battery_id, limit=limit)]
 
 
@@ -86,6 +87,7 @@ def create_battery(
         resistance=resistance,
         charge_level=charge_level,
         log_type="add",
+        health=health,
     )
     return get_battery_by_id(battery_id)
 
@@ -98,28 +100,22 @@ def apply_battery_action(
     charge_level: int,
     log_type: str,
     next_status: str,
+    health: int | None = None,
 ) -> dict | None:
     timestamp = utc_now_iso()
-    updated = update_battery(
+    success = apply_action(
         battery_id=battery_id,
         status=next_status,
         voltage=voltage,
         resistance=resistance,
         charge_level=charge_level,
+        health=health,
         last_updated=timestamp,
-    )
-    if not updated:
-        return None
-
-    insert_log(
         log_id=f"log-{uuid4().hex[:10]}",
-        battery_id=battery_id,
-        timestamp=timestamp,
-        voltage=voltage,
-        resistance=resistance,
-        charge_level=charge_level,
         log_type=log_type,
     )
+    if not success:
+        return None
     return get_battery_by_id(battery_id)
 
 

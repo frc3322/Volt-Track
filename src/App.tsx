@@ -44,15 +44,15 @@ function App() {
     clearDatabase,
   } = useBatteryTracker();
 
-  const handleCheckout = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number) => {
-    const updated = await checkoutBattery(batteryId, { voltage, resistance, chargeLevel });
+  const handleCheckout = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: number | undefined) => {
+    const updated = await checkoutBattery(batteryId, { voltage, resistance, chargeLevel, health });
     if (updated) {
       setActiveTab('dashboard');
     }
   };
 
-  const handleCheckin = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number) => {
-    const updated = await checkinBattery(batteryId, { voltage, resistance, chargeLevel });
+  const handleCheckin = async (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: number | undefined) => {
+    const updated = await checkinBattery(batteryId, { voltage, resistance, chargeLevel, health });
     if (updated) {
       setActiveTab('dashboard');
     }

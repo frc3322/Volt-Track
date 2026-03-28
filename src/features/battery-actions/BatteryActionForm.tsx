@@ -8,7 +8,7 @@ type BatteryActionMode = 'checkin' | 'checkout';
 interface Props {
   mode: BatteryActionMode;
   batteries: Battery[];
-  onSubmit: (batteryId: string, voltage: number, resistance: number, chargeLevel: number) => Promise<void>;
+  onSubmit: (batteryId: string, voltage: number, resistance: number, chargeLevel: number, health: number | undefined) => Promise<void>;
 }
 
 const copy = {
@@ -49,6 +49,7 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
   const [voltage, setVoltage] = useState('');
   const [resistance, setResistance] = useState('');
   const [chargeLevel, setChargeLevel] = useState('');
+  const [health, setHealth] = useState('');
 
   const isCheckout = mode === 'checkout';
   const availableBatteries = batteries.filter((battery) =>
@@ -69,6 +70,7 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
     setVoltage(battery.currentVoltage.toString());
     setResistance(battery.resistance.toString());
     setChargeLevel(battery.chargeLevel.toString());
+    setHealth(battery.health.toString());
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -77,7 +79,13 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
       return;
     }
 
-    await onSubmit(selectedBattery, Number(voltage), Number(resistance), Number(chargeLevel));
+    await onSubmit(
+      selectedBattery,
+      Number(voltage),
+      Number(resistance),
+      Number(chargeLevel),
+      health !== '' ? Number(health) : undefined,
+    );
   };
 
   return (
@@ -93,7 +101,16 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+              event.preventDefault();
+              event.currentTarget.requestSubmit();
+            }
+          }}
+          className="space-y-6"
+        >
           <div>
             <Label>Select Battery</Label>
             <Select value={selectedBattery} onChange={handleSelectChange} required aria-label="Select Battery">
@@ -133,21 +150,40 @@ export default function BatteryActionForm({ mode, batteries, onSubmit }: Readonl
             </div>
           </div>
 
-          <div>
-            <Label>Charge Level (%)</Label>
-            <div className="relative">
-              <Input
-                type="number"
-                min="0"
-                max="200"
-                required
-                aria-label="Charge Level (%)"
-                value={chargeLevel}
-                onChange={(event) => setChargeLevel(event.target.value)}
-                placeholder={content.placeholder.chargeLevel}
-                className="pr-12"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">%</span>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <Label>Charge Level (%)</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="200"
+                  required
+                  aria-label="Charge Level (%)"
+                  value={chargeLevel}
+                  onChange={(event) => setChargeLevel(event.target.value)}
+                  placeholder={content.placeholder.chargeLevel}
+                  className="pr-12"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">%</span>
+              </div>
+            </div>
+            <div>
+              <Label>Health (%) <span className="text-gray-600 normal-case tracking-normal font-normal">optional</span></Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  aria-label="Health (%)"
+                  value={health}
+                  onChange={(event) => setHealth(event.target.value)}
+                  placeholder="100"
+                  className="pr-12"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">%</span>
+              </div>
             </div>
           </div>
 

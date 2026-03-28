@@ -123,6 +123,7 @@ def checkout_battery(battery_id: str, payload: BatteryAction) -> dict:
         charge_level=payload.chargeLevel,
         log_type="checkout",
         next_status="Checked Out",
+        health=payload.health,
     )
     if not record:
         raise HTTPException(status_code=404, detail="Battery not found")
@@ -138,6 +139,7 @@ def checkin_battery(battery_id: str, payload: BatteryAction) -> dict:
         charge_level=payload.chargeLevel,
         log_type="checkin",
         next_status="Checked In",
+        health=payload.health,
     )
     if not record:
         raise HTTPException(status_code=404, detail="Battery not found")

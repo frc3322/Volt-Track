@@ -25,6 +25,7 @@ class BatteryAction(BaseModel):
     voltage: float = Field(gt=0)
     resistance: float = Field(ge=0)
     chargeLevel: int = Field(ge=0, le=200)
+    health: int | None = Field(default=None, ge=0, le=100)
 
 
 class BatteryResponse(BaseModel):
@@ -46,6 +47,7 @@ class LogResponse(BaseModel):
     voltage: float
     resistance: float
     chargeLevel: int
+    health: int | None = None
 
 
 class ExportSnapshotResponse(BaseModel):

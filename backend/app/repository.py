@@ -22,7 +22,7 @@ def get_battery(battery_id: str) -> sqlite3.Row | None:
 
 def list_logs(
     battery_id: str | None = None,
-    limit: int | None = 50,
+    limit: int | None = None,
 ) -> list[sqlite3.Row]:
     query = "SELECT * FROM logs"
     params: tuple[object, ...] = ()
@@ -79,15 +79,16 @@ def insert_log(
     resistance: float,
     charge_level: int,
     log_type: str,
+    health: int | None = None,
 ) -> None:
     with get_connection() as connection:
         connection.execute(
             """
             INSERT INTO logs (
-                id, battery_id, timestamp, type, voltage, resistance, charge_level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                id, battery_id, timestamp, type, voltage, resistance, charge_level, health
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (log_id, battery_id, timestamp, log_type, voltage, resistance, charge_level),
+            (log_id, battery_id, timestamp, log_type, voltage, resistance, charge_level, health),
         )
         connection.commit()
 
@@ -98,19 +99,56 @@ def update_battery(
     voltage: float,
     resistance: float,
     charge_level: int,
+    health: int | None = None,
     last_updated: str,
 ) -> bool:
     with get_connection() as connection:
         cursor = connection.execute(
             """
             UPDATE batteries
-            SET status = ?, current_voltage = ?, resistance = ?, charge_level = ?, last_updated = ?
+            SET status = ?, current_voltage = ?, resistance = ?, charge_level = ?,
+                health = COALESCE(?, health), last_updated = ?
             WHERE id = ?
             """,
-            (status, voltage, resistance, charge_level, last_updated, battery_id),
+            (status, voltage, resistance, charge_level, health, last_updated, battery_id),
         )
         connection.commit()
     return cursor.rowcount > 0
+
+
+def apply_action(
+    *,
+    battery_id: str,
+    status: str,
+    voltage: float,
+    resistance: float,
+    charge_level: int,
+    health: int | None,
+    last_updated: str,
+    log_id: str,
+    log_type: str,
+) -> bool:
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            UPDATE batteries
+            SET status = ?, current_voltage = ?, resistance = ?, charge_level = ?,
+                health = COALESCE(?, health), last_updated = ?
+            WHERE id = ?
+            """,
+            (status, voltage, resistance, charge_level, health, last_updated, battery_id),
+        )
+        if cursor.rowcount == 0:
+            return False
+        connection.execute(
+            """
+            INSERT INTO logs (id, battery_id, timestamp, type, voltage, resistance, charge_level, health)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (log_id, battery_id, last_updated, log_type, voltage, resistance, charge_level, health),
+        )
+        connection.commit()
+    return True
 
 
 def delete_battery(battery_id: str) -> bool:
